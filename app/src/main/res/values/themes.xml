@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Wandr" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Wandr" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Shown for a split second before Compose draws, avoids a white flash -->
+        <item name="android:windowBackground">@color/cream</item>
+    </style>
 </resources>

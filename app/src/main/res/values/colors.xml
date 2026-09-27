@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- Wandr brand palette (mirrors ui/theme/Color.kt, for XML resources like the launcher icon) -->
+    <color name="forest_green">#FF163820</color>
+    <color name="sage">#FF5A7B62</color>
+    <color name="sand">#FFBFA78A</color>
+    <color name="taupe">#FF9A876F</color>
+    <color name="cream">#FFFCFAF6</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

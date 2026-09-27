@@ -1,6 +1,5 @@
 package com.kotlin.wandr.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,33 +10,40 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColorScheme = lightColorScheme(
+    primary = ForestGreen,
+    onPrimary = Cream,
+    secondary = Sage,
+    onSecondary = Cream,
+    tertiary = Sand,
+    onTertiary = ForestGreen,
+    background = Cream,
+    onBackground = ForestGreen,
+    surface = Cream,
+    onSurface = ForestGreen,
+    outline = Taupe
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColorScheme = darkColorScheme(
+    primary = Sand,
+    onPrimary = ForestGreen,
+    secondary = Sage,
+    onSecondary = Cream,
+    tertiary = Taupe,
+    onTertiary = Cream,
+    background = ForestGreen,
+    onBackground = Cream,
+    surface = ForestGreen,
+    onSurface = Cream,
+    outline = Taupe
 )
 
 @Composable
 fun WandrTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color (Android 12+) replaces the brand palette with wallpaper colors,
+    // so it is off by default to keep Wandr's identity consistent.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
