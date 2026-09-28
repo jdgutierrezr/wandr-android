@@ -8,34 +8,55 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
     primary = ForestGreen,
     onPrimary = Cream,
+    primaryContainer = Mint,
+    onPrimaryContainer = ForestGreen,
     secondary = Sage,
     onSecondary = Cream,
+    secondaryContainer = Mint,
+    onSecondaryContainer = ForestGreen,
     tertiary = Sand,
     onTertiary = ForestGreen,
     background = Cream,
-    onBackground = ForestGreen,
-    surface = Cream,
-    onSurface = ForestGreen,
-    outline = Taupe
+    onBackground = Ink,
+    // Cards are white on the cream background, like in the mockups
+    surface = White,
+    onSurface = Ink,
+    surfaceVariant = Stone,
+    onSurfaceVariant = InkMuted,
+    surfaceContainerLowest = White,
+    surfaceContainerLow = White,
+    surfaceContainer = Cream,
+    surfaceContainerHigh = Stone,
+    outline = Taupe,
+    outlineVariant = Line,
+    error = Coral,
+    errorContainer = CoralLight,
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = Sand,
     onPrimary = ForestGreen,
+    primaryContainer = ForestLine,
+    onPrimaryContainer = Cream,
     secondary = Sage,
     onSecondary = Cream,
     tertiary = Taupe,
     onTertiary = Cream,
-    background = ForestGreen,
+    background = ForestDeep,
     onBackground = Cream,
-    surface = ForestGreen,
+    surface = ForestSurface,
     onSurface = Cream,
-    outline = Taupe
+    surfaceVariant = ForestLine,
+    onSurfaceVariant = Sand,
+    outline = Taupe,
+    outlineVariant = ForestLine,
 )
 
 @Composable
@@ -56,9 +77,20 @@ fun WandrTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalWandrColors provides if (darkTheme) DarkWandrColors else LightWandrColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = WandrShapes,
+            content = content
+        )
+    }
+}
+
+/** Wandr tokens, next to `MaterialTheme.colorScheme` / `.typography`. */
+object WandrTheme {
+    val colors: WandrColors
+        @Composable @ReadOnlyComposable get() = LocalWandrColors.current
+    val spacing = WandrSpacing
+    val radius = WandrRadius
 }

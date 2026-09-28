@@ -17,7 +17,8 @@ Wandr uses the user's location to show popular activities in nearby places, in o
 - Supabase (database, auth and storage) through [supabase-kt](https://github.com/supabase-community/supabase-kt)
 - Min SDK 24
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layers, the design patterns and how a request flows.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layers, the design patterns and how a request flows,
+and [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the tokens and UI components.
 The backend is documented in the `ISIS3510-Moviles-Group32` repository.
 
 ## Design
