@@ -1,6 +1,7 @@
 package com.kotlin.wandr.ui.navigation
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -13,9 +14,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.ui.catalog.ComponentCatalog
+import com.kotlin.wandr.ui.components.LinkButton
+import com.kotlin.wandr.ui.components.map.WandrMap
 import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
+import com.kotlin.wandr.ui.feature.map.MapRoute
 import kotlinx.serialization.Serializable
 
 /** Every screen of the app is a route. Type-safe: arguments are properties of the class. */
@@ -23,6 +27,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SignUpDestination
 @Serializable data object OnboardingDestination
 @Serializable data object HomeDestination
+@Serializable data object MapDestination
 @Serializable data object CatalogDestination
 
 /**
@@ -32,7 +37,7 @@ import kotlinx.serialization.Serializable
  * 3. Navigate to it with `navController.navigate(ThatDestination)`.
  */
 @Composable
-fun WandrNavHost(navController: NavHostController = rememberNavController()) {
+fun WandrNavHost(map: WandrMap, navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = LoginDestination) {
 
         composable<LoginDestination> {
@@ -52,9 +57,18 @@ fun WandrNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
 
+        composable<MapDestination> {
+            MapRoute(map = map, onBack = { navController.popBackStack() })
+        }
+
         // Placeholders until those screens exist
         composable<OnboardingDestination> { ComingSoon("Onboarding") }
-        composable<HomeDestination> { ComingSoon("Home") }
+        composable<HomeDestination> {
+            // Temporary shortcut until Home and the bottom bar exist
+            ComingSoon("Home") {
+                LinkButton(text = "Open the map", onClick = { navController.navigate(MapDestination) })
+            }
+        }
         composable<CatalogDestination> { ComponentCatalog(onBack = { navController.popBackStack() }) }
     }
 }
@@ -71,8 +85,13 @@ private fun NavHostController.leaveAuthTo(destination: AfterAuthDestination) {
 }
 
 @Composable
-private fun ComingSoon(name: String) {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+private fun ComingSoon(name: String, action: @Composable () -> Unit = {}) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize(),
+    ) {
         Text("$name screen coming soon", style = MaterialTheme.typography.titleMedium)
+        action()
     }
 }
