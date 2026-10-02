@@ -1,18 +1,20 @@
 package com.kotlin.wandr.data.remote.datasource
 
 import com.kotlin.wandr.data.remote.dto.QuestHistoryDto
+import com.kotlin.wandr.data.remote.dto.StreakSummaryDto
 import com.kotlin.wandr.data.remote.dto.TagDto
 import com.kotlin.wandr.data.remote.dto.UserBadgeDto
 import com.kotlin.wandr.data.remote.dto.UserDto
 import com.kotlin.wandr.data.remote.dto.UserInterestDto
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Facade over `users`, `user_badges` and the quest history. */
+/** Facade over `users`, `user_badges`, the quest history and the streak summary. */
 @Singleton
 class ProfileRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
@@ -45,6 +47,10 @@ class ProfileRemoteDataSource @Inject constructor(
                 order("completed_at", Order.DESCENDING)
             }
             .decodeList()
+
+    /** BQ4. The RPC has no parameters: it uses the logged-in user. */
+    suspend fun fetchStreakSummary(): StreakSummaryDto =
+        supabase.postgrest.rpc("get_streak_summary").decodeAs()
 }
 
 /** Facade over `tags` and `user_interests`. */
