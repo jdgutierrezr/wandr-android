@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.data.local.WandrDatabase
+import com.kotlin.wandr.data.repository.AnalyticsRepository
+import com.kotlin.wandr.data.repository.AnalyticsRepositoryImpl
 import com.kotlin.wandr.data.repository.AuthRepository
 import com.kotlin.wandr.data.repository.AuthRepositoryImpl
 import com.kotlin.wandr.data.repository.EventRepository
@@ -95,6 +97,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindFriendRepository(impl: FriendRepositoryImpl): FriendRepository
     @Binds abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
     @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
+    @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
 
     companion object {
         /** Decorator: whoever asks for a [QuestRepository] gets the measured one. */
