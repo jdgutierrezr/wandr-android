@@ -16,11 +16,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.ui.catalog.ComponentCatalog
-import com.kotlin.wandr.ui.components.LinkButton
-import com.kotlin.wandr.ui.components.map.WandrMap
+import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
+import com.kotlin.wandr.ui.feature.profile.ProfileRoute
+import com.kotlin.wandr.ui.components.LinkButton
+import com.kotlin.wandr.ui.components.map.WandrMap
 import com.kotlin.wandr.ui.feature.map.MapRoute
 import com.kotlin.wandr.ui.feature.analytics.QuestDropoffRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestRoute
@@ -35,6 +37,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object HomeDestination
 @Serializable data object MapDestination
 @Serializable data object CatalogDestination
+@Serializable data object ProfileDestination
 
 // Quest / Progress (BQ8)
 /** `questId` is read by QuestDetailViewModel through SavedStateHandle (QUEST_ID_ARG). */
@@ -81,12 +84,20 @@ fun WandrNavHost(map: WandrMap, navController: NavHostController = rememberNavCo
             ComingSoon(
                 "Home",
                 links = listOf(
+                    "Open Profile" to { navController.navigate(ProfileDestination) },
                     "My quests in progress" to { navController.navigate(ActiveQuestsDestination) },
                     "Abandonment funnel (BQ8)" to { navController.navigate(QuestDropoffDestination) },
                 ),
             )
         }
         composable<CatalogDestination> { ComponentCatalog(onBack = { navController.popBackStack() }) }
+
+        composable<ProfileDestination> {
+            ProfileRoute(
+                onSignedOut = { navController.leaveToLogin() },
+                onSelectTab = { tab -> navController.openTab(tab) },
+            )
+        }
 
         // ---------- Quest / Progress (BQ8) ----------
 
@@ -133,6 +144,29 @@ private fun NavHostController.leaveAuthTo(destination: AfterAuthDestination) {
     }
     navigate(target) {
         popUpTo(LoginDestination) { inclusive = true }
+    }
+}
+
+/** After signing out, Back must not return to the app: the whole back stack is removed. */
+private fun NavHostController.leaveToLogin() {
+    navigate(LoginDestination) {
+        popUpTo(graph.id) { inclusive = true }
+    }
+}
+
+/**
+ * Bottom bar tabs. Each tab replaces the current one instead of stacking.
+ * Tabs whose screen does not exist yet fall back to Home.
+ */
+private fun NavHostController.openTab(tab: MainTab) {
+    val target: Any = when (tab) {
+        MainTab.PROFILE -> ProfileDestination
+        MainTab.MAP -> MapDestination
+        else -> HomeDestination
+    }
+    navigate(target) {
+        launchSingleTop = true
+        popUpTo(HomeDestination)
     }
 }
 
