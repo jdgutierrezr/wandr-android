@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.ErrorMapper
+import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.EventRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.QuestRemoteDataSource
@@ -63,8 +64,17 @@ class SupabaseIntegrationTest {
         }
         assertTrue(quests.activeCompletions().any { it.questId == started })
 
+        val analytics = AnalyticsRemoteDataSource(supabase)
+        val abandonsBefore = analytics.questDropoff().filter { it.questId == started }.sumOf { it.abandonedCount }
+
         quests.abandonQuest(started)
         assertTrue(quests.activeCompletions().none { it.questId == started })
+
+        // BQ8: the abandon shows up in the drop-off, right after the last checked step
+        val rows = analytics.questDropoff().filter { it.questId == started }
+        assertEquals(abandonsBefore + 1, rows.sumOf { it.abandonedCount })
+        val expectedLastStep = if (steps.size > 1 && !firstStep.requiresPhoto) firstStep.orderIndex else 0
+        assertTrue(rows.any { it.lastStep == expectedLastStep })
 
         // Backend rules come back as readable messages
         val error = runCatching { quests.abandonQuest(started) }.exceptionOrNull()!!
