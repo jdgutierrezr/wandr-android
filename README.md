@@ -53,12 +53,15 @@ docs/                        Architecture documentation
 
 ## Getting started
 
-1. Add the Supabase keys to `local.properties` in the project root. This file is not committed.
+1. Add the Supabase keys and a Google Maps key to `local.properties` in the project root. This file is not committed.
 
    ```properties
    SUPABASE_URL=https://cugtwwqqxczwtkfkubrf.supabase.co
    SUPABASE_PUBLISHABLE_KEY=sb_publishable_YPjvNLSqznQitYTinqvabg_p8V5e8-i
+   MAPS_API_KEY=<your key>
    ```
+
+   The Maps key is created in Google Cloud Console with **Maps SDK for Android** enabled. Without it the map screen stays blank.
 
 2. Open the project in Android Studio and let Gradle sync.
 3. Run the `app` configuration on an emulator or device.

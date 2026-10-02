@@ -86,7 +86,8 @@ class QuestRemoteDataSource @Inject constructor(
 class StorageRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
 ) {
-    fun userId(): String = supabase.requireUserId()
+    /** Waits for the session: uploads run right after coming back from the camera. */
+    suspend fun userId(): String = supabase.awaitUserId()
 
     /** Uploads (or replaces) a file and returns its path inside the bucket. */
     suspend fun upload(bucket: String, path: String, bytes: ByteArray): String {

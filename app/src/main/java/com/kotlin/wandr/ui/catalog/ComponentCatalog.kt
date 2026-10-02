@@ -75,6 +75,8 @@ import com.kotlin.wandr.ui.components.WeekDaysRow
 import com.kotlin.wandr.ui.components.WeeklyQuestsChart
 import com.kotlin.wandr.domain.model.WeekComparison
 import com.kotlin.wandr.domain.model.WeeklyQuests
+import com.kotlin.wandr.ui.components.DropoffBar
+import com.kotlin.wandr.ui.components.DropoffBars
 import com.kotlin.wandr.ui.components.StatusBadge
 import com.kotlin.wandr.ui.components.ToggleRow
 import com.kotlin.wandr.ui.components.WandrBottomBar
@@ -253,6 +255,8 @@ private fun ProgressSection() = CatalogGroup("Progress") {
         weeks = listOf(WeeklyQuests("08 Sep", 2), WeeklyQuests("15 Sep", 4), WeeklyQuests("22 Sep", 1), WeeklyQuests("29 Sep", 3)),
     )
     WeekComparisonMessage(WeekComparison(currentWeek = 3, previousWeek = 1))
+    SectionLabel("Abandonment funnel (BQ8)", trailing = "7 abandons")
+    DropoffBars(bars = listOf(DropoffBar("Before step 1", 2), DropoffBar("After step 1", 4), DropoffBar("After step 2", 1)))
 }
 
 @Composable

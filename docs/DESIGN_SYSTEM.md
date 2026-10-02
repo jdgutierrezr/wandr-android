@@ -39,6 +39,7 @@ Rules:
 | `QuestCard`, `QuestRow`, `ObjectiveItem`, `RewardRow`, `CoverImage`, `MetaText` | `QuestComponents.kt` | Upcoming Quests, map card, Quest Objectives, Rewards |
 | `StatCard`, `MilestoneCard`, `WandrProgressBar`, `AchievementCard` | `ProgressComponents.kt` | Side Quests (profile) |
 | `WeekDaysRow`, `WeeklyQuestsChart`, `WeekComparisonMessage` | `StreakComponents.kt` | Profile: this week's active days, quests per week and the comparison with last week (BQ4) |
+| `DropoffBars`, `DropoffBar` | `DropoffComponents.kt` | Abandonment funnel: abandons per step (BQ8) |
 | `SelectableCard`, `ToggleRow` | `SelectionComponents.kt` | Relaxed / Active, "Broadcasting location" |
 | `AuthLayout` | `AuthLayout.kt` | Login and Sign up frame |
 

@@ -4,6 +4,8 @@ import com.kotlin.wandr.core.location.FusedLocationProvider
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.network.AndroidConnectivityObserver
 import com.kotlin.wandr.core.network.ConnectivityObserver
+import com.kotlin.wandr.ui.components.map.GoogleMapAdapter
+import com.kotlin.wandr.ui.components.map.WandrMap
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -44,4 +46,7 @@ abstract class DeviceModule {
 
     @Binds
     abstract fun bindLocationProvider(impl: FusedLocationProvider): LocationProvider
+
+    @Binds
+    abstract fun bindWandrMap(impl: GoogleMapAdapter): WandrMap
 }
