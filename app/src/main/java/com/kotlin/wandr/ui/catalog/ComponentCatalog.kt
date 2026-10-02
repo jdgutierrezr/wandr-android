@@ -70,6 +70,8 @@ import com.kotlin.wandr.ui.components.SectionHeader
 import com.kotlin.wandr.ui.components.SectionLabel
 import com.kotlin.wandr.ui.components.SelectableCard
 import com.kotlin.wandr.ui.components.StatCard
+import com.kotlin.wandr.ui.components.DropoffBar
+import com.kotlin.wandr.ui.components.DropoffBars
 import com.kotlin.wandr.ui.components.StatusBadge
 import com.kotlin.wandr.ui.components.ToggleRow
 import com.kotlin.wandr.ui.components.WandrBottomBar
@@ -242,6 +244,8 @@ private fun ProgressSection() = CatalogGroup("Progress") {
         AchievementCard("Park Explorer", "Walked 10km", Icons.Rounded.Park, isUnlocked = true, modifier = Modifier.weight(1f))
         AchievementCard("Early Bird", "Quest before 7AM", Icons.Outlined.WbSunny, isUnlocked = false, modifier = Modifier.weight(1f))
     }
+    SectionLabel("Abandonment funnel (BQ8)", trailing = "7 abandons")
+    DropoffBars(bars = listOf(DropoffBar("Before step 1", 2), DropoffBar("After step 1", 4), DropoffBar("After step 2", 1)))
 }
 
 @Composable
