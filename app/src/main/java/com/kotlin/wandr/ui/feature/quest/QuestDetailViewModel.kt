@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.error.appError
+import com.kotlin.wandr.core.event.AppEvent
+import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.strategy.FetchPolicy
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.QuestRepository
@@ -34,9 +36,13 @@ data class QuestDetailUiState(
 class QuestDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val questRepository: QuestRepository,
+    private val eventBus: AppEventBus,
 ) : ViewModel() {
 
     private val questId: String = checkNotNull(savedStateHandle[QUEST_ID_ARG]) { "Missing $QUEST_ID_ARG" }
+
+    /** QUEST_VIEWED is reported once per visit, not again after a rotation. */
+    private var viewReported = false
 
     private val _uiState = MutableStateFlow(QuestDetailUiState())
     val uiState: StateFlow<QuestDetailUiState> = _uiState.asStateFlow()
@@ -66,6 +72,16 @@ class QuestDetailViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    /**
+     * BQ8 funnel: the Quest Details screen calls this when it is shown. The ViewModel only
+     * publishes the event; the QuestFunnelTracker (Observer) records it.
+     */
+    fun onScreenShown() {
+        if (viewReported) return
+        viewReported = true
+        viewModelScope.launch { eventBus.publish(AppEvent.QuestViewed(questId)) }
     }
 
     fun startQuest() {

@@ -247,6 +247,21 @@ flowchart TB
 - **Event bus:** refreshing the profile after a quest and saving telemetry are side effects. They live in subscribers, so the quest repository does not need to know about profiles or telemetry.
 
 ## Architecture Design - Component Interaction and Communication
+| Pattern / style | Where | Why |
+| --- | --- | --- |
+| **MVVM** | `ui/feature/**/XViewModel.kt` | Screens only render a `UiState` and call functions. All the logic can be tested without Android UI. |
+| **Repository** | `data/repository/` | One interface per domain. ViewModels depend on the interface, never on Supabase or Room. |
+| **DTO** | `data/remote/dto/` | Each class mirrors a Supabase response exactly (`@SerialName("snake_case")`). Postgres enums stay as `String`, so a new backend value cannot break decoding. |
+| **DAO** | `data/local/dao/` | All local SQL lives in Room DAOs. Queries return `Flow`, and multi-step writes use `@Transaction`. |
+| **Mapper (Adapter)** | `data/mapper/` | Converts DTO → Entity → domain model. If a column changes, only the mapper changes. |
+| **Facade** | `data/remote/datasource/*RemoteDataSource` | Hides the `supabase-kt` query builder behind simple methods such as `nearbyQuests(lat, lng, radius)`. Only these classes import Supabase. |
+| **Strategy** | `core/strategy/` | `NetworkFirst`, `CacheFirst` and `CacheOnly` are interchangeable. `StrategySelector` switches to `CacheOnly` when there is no connection. Repositories do not repeat this logic. |
+| **Decorator** | `data/repository/TelemetryQuestRepository.kt` | Wraps the real `QuestRepository` (`by inner`) and measures BQ1 (`nearbyQuests`) and BQ2 (`completeObjective`) without touching its code. Hilt hands out the decorated instance (`RepositoryModule`). |
+| **Observer** | Room `Flow` → Repository → ViewModel | When Room changes, every screen that shows that data updates automatically. |
+| **Observer (BQ8 funnel)** | `core/analytics/QuestFunnelTracker.kt` | Subscribes to `QuestViewed`, `QuestStarted`, `NavigationStarted`, `QuestCompleted` and `QuestAbandoned` and records each one as a funnel row in `telemetry_events`. The screens and the repository only publish; they do not know the tracker exists. |
+| **Event-based** | `core/event/AppEventBus.kt` | Publishers (repositories, the Decorator, connectivity) and subscribers (`TelemetryCollector`, `CacheInvalidator`, ViewModels) do not know each other. |
+| **Singleton + Dependency Injection** | `core/di/` (Hilt) | One `SupabaseClient` (one session) and one `WandrDatabase` for the whole app. Tests pass in fakes. |
+| **Layers + single source of truth** | Remote → Room → Repository | Reads always come from Room, so the app shows saved data offline (QS1) and keeps quest progress (QS8). |
 
 ### Diagram 4: Reading data (nearby quests)
 
@@ -458,3 +473,56 @@ com.kotlin.wandr
     ├── navigation/          Navigation graph
     └── feature/             auth, onboarding, home, quest, map, events, friends, notifications, profile
 ```
+
+## ViewModel per screen
+
+| Screen | ViewModel | Repositories |
+| --- | --- | --- |
+| Log in | `LoginViewModel` | Auth, Profile, Tag |
+| Sign up | `SignUpViewModel` | Auth |
+| Onboarding | `OnboardingViewModel` | Tag, Profile |
+| Discovery Engine | `HomeViewModel` | Quest, Tag + LocationProvider |
+| Quest Details | `QuestDetailViewModel` + `QuestDetailScreen` | Quest (publishes `QuestViewed`) |
+| Active Quest / Navigation | `ActiveQuestViewModel` + `ActiveQuestScreen` | Quest, Storage (publishes `NavigationStarted`) |
+| My Quests (in progress) | `ActiveQuestViewModel` + `ActiveQuestsScreen` | Quest |
+| Abandonment Funnel (BQ8) | `QuestDropoffViewModel` + `QuestDropoffScreen` | Analytics (`get_quest_dropoff` RPC) |
+| Map | `MapViewModel` | Place + LocationProvider |
+| Friends on Quest | `FriendsMapViewModel` | Location + LocationProvider |
+| Events | `EventsViewModel` | Event |
+| Friends | `FriendsViewModel` | Friend |
+| Notifications | `NotificationsViewModel` | Notification |
+| Profile / Side Quests | `ProfileViewModel` | Profile, Auth |
+
+Every `UiState` has an `errorMessage` that is ready to show, plus an `onErrorShown()` function. Screens that can show cached data also have `isShowingSavedData`.
+
+## BQ8: where users abandon quests
+
+*"In which step do users most frequently abandon a quest without finishing it?"* (Type 3)
+
+```mermaid
+flowchart LR
+    subgraph PUB["Publishers"]
+        QD["QuestDetailViewModel<br/>QuestViewed"]
+        AQ["ActiveQuestViewModel<br/>NavigationStarted"]
+        QR["QuestRepository<br/>QuestStarted · QuestCompleted · QuestAbandoned"]
+    end
+    Bus["AppEventBus"]
+    Tracker["QuestFunnelTracker<br/>(Observer)"]
+    Col["TelemetryCollector<br/>Room buffer + batches"]
+    Tel[("telemetry_events<br/>quest_viewed … quest_abandoned")]
+    QC[("quest_completions +<br/>quest_objective_completions")]
+    RPC["RPC get_quest_dropoff"]
+    Screen["QuestDropoffScreen<br/>Abandonment funnel"]
+
+    QD & AQ & QR --> Bus --> Tracker -->|"RequestTimed"| Bus --> Col --> Tel
+    QR -->|"abandon_quest keeps the checked steps"| QC --> RPC --> Screen
+```
+
+- **Answer (in the app):** `get_quest_dropoff()` reads every abandoned quest and the last step that was checked, and the
+  Abandonment Funnel screen shows the quest + step with most abandons and the totals per step.
+- **Funnel events:** `quest_viewed → quest_accepted → navigation_started → quest_completed / quest_abandoned` go to
+  `telemetry_events` with `duration_ms` = time since the previous step. They also show the drop-off *before* a quest
+  is started (viewed but never accepted). The SQL is in `telemetry.sql` of the backend repo.
+- **Progress persistence:** active quests and checked steps live in Room (`activeQuests`), so the tracker keeps the
+  progress offline and after the app is closed.
+

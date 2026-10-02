@@ -38,6 +38,7 @@ Rules:
 | `WandrTopBar`, `NotificationsAction`, `WandrBottomBar` | `Bars.kt` | Top bar with streak, bottom bar (Map, Friends, Events, Leaderboard, Profile) |
 | `QuestCard`, `QuestRow`, `ObjectiveItem`, `RewardRow`, `CoverImage`, `MetaText` | `QuestComponents.kt` | Upcoming Quests, map card, Quest Objectives, Rewards |
 | `StatCard`, `MilestoneCard`, `WandrProgressBar`, `AchievementCard` | `ProgressComponents.kt` | Side Quests (profile) |
+| `DropoffBars`, `DropoffBar` | `DropoffComponents.kt` | Abandonment funnel: abandons per step (BQ8) |
 | `SelectableCard`, `ToggleRow` | `SelectionComponents.kt` | Relaxed / Active, "Broadcasting location" |
 | `AuthLayout` | `AuthLayout.kt` | Login and Sign up frame |
 
