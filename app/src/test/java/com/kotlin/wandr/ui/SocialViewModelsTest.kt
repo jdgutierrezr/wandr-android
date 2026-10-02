@@ -197,6 +197,7 @@ class SocialViewModelsTest {
         every { profileRepository.observeProfile(any()) } returns flowOf(Resource.Success(profile))
         every { profileRepository.observeBadges(any()) } returns flowOf(Resource.Success(emptyList()))
         every { profileRepository.observeQuestHistory(any()) } returns flowOf(Resource.Success(emptyList()))
+        coEvery { profileRepository.streakSummary() } returns Result.failure(AppException(AppError.Network))
 
         val viewModel = ProfileViewModel(profileRepository, mockk<AuthRepository>(), bus)
         assertEquals(profile, viewModel.uiState.value.profile)
