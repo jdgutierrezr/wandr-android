@@ -17,6 +17,7 @@ import com.kotlin.wandr.data.remote.datasource.ProfileRemoteDataSource
 import com.kotlin.wandr.domain.model.EarnedBadge
 import com.kotlin.wandr.domain.model.EnergyLevel
 import com.kotlin.wandr.domain.model.QuestHistoryItem
+import com.kotlin.wandr.domain.model.StreakSummary
 import com.kotlin.wandr.domain.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -36,6 +37,12 @@ interface ProfileRepository {
 
     /** Downloads the profile, badges and history again (after finishing a quest, for example). */
     suspend fun refreshAll(): Result<Unit>
+
+    /**
+     * BQ4: streak, points, quests per week, this week's active days and achievements.
+     * Always from the network (`get_streak_summary`), so it needs a connection.
+     */
+    suspend fun streakSummary(): Result<StreakSummary>
 }
 
 @Singleton
@@ -80,6 +87,8 @@ class ProfileRepositoryImpl @Inject constructor(
         refreshBadges()
         refreshHistory()
     }
+
+    override suspend fun streakSummary() = safeCall { remote.fetchStreakSummary().toDomain() }
 
     private suspend fun downloadProfile(): ProfileEntity {
         val profile = remote.fetchProfile().toEntity()

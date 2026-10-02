@@ -491,7 +491,7 @@ com.kotlin.wandr
 | Events | `EventsViewModel` | Event |
 | Friends | `FriendsViewModel` | Friend |
 | Notifications | `NotificationsViewModel` | Notification |
-| Profile / Side Quests | `ProfileViewModel` | Profile, Auth |
+| Profile / Side Quests | `ProfileViewModel` + `ProfileScreen` | Profile (+ `get_streak_summary` RPC for BQ4), Auth |
 
 Every `UiState` has an `errorMessage` that is ready to show, plus an `onErrorShown()` function. Screens that can show cached data also have `isShowingSavedData`.
 

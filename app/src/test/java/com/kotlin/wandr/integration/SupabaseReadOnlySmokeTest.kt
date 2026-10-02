@@ -62,6 +62,14 @@ class SupabaseReadOnlySmokeTest {
         println("badges: " + profile.fetchBadges().map { it.toEntity().toDomain() })
         println("history: " + profile.fetchQuestHistory().map { it.toEntity() })
 
+        // BQ4: get_streak_summary (same RPC as iOS)
+        val streak = profile.fetchStreakSummary().toDomain()
+        println("streak summary: $streak, comparison=${streak.weekComparison?.message}")
+        assertEquals(7, streak.thisWeek.size)
+        assertEquals(4, streak.weeklyHistory.size)
+        assertEquals(me.currentXp, streak.points)
+        assertEquals(me.currentStreak, streak.currentStreak)
+
         val tags = TagRemoteDataSource(supabase)
         println("tags: " + tags.fetchTags().map { it.name })
         println("interests: " + tags.fetchInterestIds())
