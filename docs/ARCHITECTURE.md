@@ -478,6 +478,7 @@ com.kotlin.wandr
 
 | Screen | ViewModel | Repositories |
 | --- | --- | --- |
+| Splash / session gate | `SessionViewModel` + `SplashScreen` | Auth (`sessionState`) |
 | Log in | `LoginViewModel` | Auth, Profile, Tag |
 | Sign up | `SignUpViewModel` | Auth |
 | Onboarding | `OnboardingViewModel` | Tag, Profile |
@@ -525,4 +526,18 @@ flowchart LR
   is started (viewed but never accepted). The SQL is in `telemetry.sql` of the backend repo.
 - **Progress persistence:** active quests and checked steps live in Room (`activeQuests`), so the tracker keeps the
   progress offline and after the app is closed.
+
+## Session gate (authentication)
+
+The app starts on a splash screen instead of Login. `SessionViewModel` observes `AuthRepository.sessionState`:
+
+| Supabase status | `SessionState` | What the app does |
+| --- | --- | --- |
+| `Initializing` | `Loading` | Splash keeps waiting for the saved session |
+| `Authenticated` | `SignedIn` | Splash opens Home: no password needed |
+| `RefreshFailure` | `Reconnecting` | The user stays in the app (usually offline, or back from the camera) |
+| `NotAuthenticated` | `SignedOut` | Splash opens Login; anywhere else the app goes back to Login |
+
+When a session that existed ends (logout, expired or revoked token), `SessionViewModel` publishes
+`AppEvent.SignedOut`, so `CacheInvalidator` clears the previous user's cached data.
 
