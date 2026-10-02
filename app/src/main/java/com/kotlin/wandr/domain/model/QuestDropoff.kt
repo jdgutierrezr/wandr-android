@@ -55,7 +55,24 @@ data class QuestDropoffReport(val points: List<DropoffPoint>) {
             return List(maxSteps) { position -> points.filter { it.lastStep == position }.sumOf { it.abandonedCount } }
         }
 
-    /** One entry per quest, most abandoned first. */
+    /**
+     * Smart feature: the step of [questId] where most abandoned attempts stopped, or null if
+     * nobody has abandoned that quest yet. Active Quest shows a hint on that step.
+     */
+    fun riskiestStepFor(questId: String): StepRisk? {
+        val quest = quests.firstOrNull { it.questId == questId } ?: return null
+        val lastChecked = quest.worstLastStep
+        val abandons = quest.abandonsByLastStep.getOrElse(lastChecked) { 0 }
+        if (abandons == 0) return null
+        return StepRisk(
+            questId = questId,
+            stepOrderIndex = lastChecked + 1,
+            abandons = abandons,
+            questAbandons = quest.abandoned,
+        )
+    }
+
+    /** One entry per quest, most abandoned quest first. */
     val quests: List<QuestDropoff>
         get() = points
             .groupBy { it.questId }
@@ -72,4 +89,22 @@ data class QuestDropoffReport(val points: List<DropoffPoint>) {
                 )
             }
             .sortedByDescending { it.abandoned }
+}
+
+/**
+ * The step of a quest where users give up most often (smart feature on top of BQ8).
+ * [stepOrderIndex] is the `order_index` of the step they did not finish.
+ */
+data class StepRisk(
+    val questId: String,
+    val stepOrderIndex: Int,
+    val abandons: Int,
+    val questAbandons: Int,
+) {
+    /** "3 of 4 people who gave up this quest stopped at this step. You've got this!" */
+    val message: String
+        get() {
+            val people = if (questAbandons == 1) "person" else "people"
+            return "$abandons of $questAbandons $people who gave up this quest stopped at this step. You've got this!"
+        }
 }

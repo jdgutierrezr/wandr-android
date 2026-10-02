@@ -6,10 +6,13 @@ import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.event.AppEvent
 import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.strategy.Resource
+import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.ObjectiveResult
+import com.kotlin.wandr.domain.model.QuestDropoffReport
+import com.kotlin.wandr.domain.model.StepRisk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +35,12 @@ data class ActiveQuestUiState(
     /** Last checked step: "2 of 3", or the XP / level / badges when the quest was completed. */
     val lastResult: ObjectiveResult? = null,
     val errorMessage: String? = null,
-)
+    /** Smart feature: BQ8 drop-off data, used to warn on the riskiest step. Null = no hint. */
+    val dropoff: QuestDropoffReport? = null,
+) {
+    /** The step of [questId] where most people give up, or null if there is no data. */
+    fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
+}
 
 /** Active Quest Tracker. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,6 +49,7 @@ class ActiveQuestViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val storageRepository: StorageRepository,
     private val eventBus: AppEventBus,
+    private val analyticsRepository: AnalyticsRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveQuestUiState())
@@ -65,6 +74,20 @@ class ActiveQuestViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+
+        loadDropoffHints()
+    }
+
+    /**
+     * Smart feature: reuses the BQ8 analytics (where users abandon quests) to warn the user on
+     * the step where most people give up. It is only a hint, so a failure is silent: no data
+     * or no connection simply means no hint.
+     */
+    private fun loadDropoffHints() {
+        viewModelScope.launch {
+            analyticsRepository.questDropoff()
+                .onSuccess { report -> _uiState.update { it.copy(dropoff = report) } }
+        }
     }
 
     fun refresh() = refreshTrigger.update { it + 1 }

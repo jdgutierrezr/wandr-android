@@ -58,4 +58,25 @@ class QuestDropoffTest {
         assertEquals(0, empty.totalAbandoned)
         assertEquals(emptyList<Int>(), empty.abandonsByPosition)
     }
+
+    // ---------- Smart feature ----------
+
+    @Test
+    fun `the riskiest step is the one after the most common last checked step`() {
+        val risk = report.riskiestStepFor("q5")!!
+        // 3 abandons stopped after step 1, so step 2 is where people give up
+        assertEquals(2, risk.stepOrderIndex)
+        assertEquals(3, risk.abandons)
+        assertEquals(4, risk.questAbandons)
+        assertEquals("3 of 4 people who gave up this quest stopped at this step. You've got this!", risk.message)
+
+        // Most Monserrate abandons happen before step 1
+        assertEquals(1, report.riskiestStepFor("q7")!!.stepOrderIndex)
+    }
+
+    @Test
+    fun `a quest nobody abandoned has no risky step`() {
+        assertNull(report.riskiestStepFor("unknown-quest"))
+        assertNull(QuestDropoffReport(emptyList()).riskiestStepFor("q5"))
+    }
 }
