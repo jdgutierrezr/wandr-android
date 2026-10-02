@@ -75,16 +75,17 @@ fun WandrNavHost(map: WandrMap, navController: NavHostController = rememberNavCo
         }
 
         // Placeholders until those screens exist
-        composable<OnboardingDestination> { ComingSoon("Onboarding") }
+        val shortcutLinks = listOf(
+            "Discovery map" to { navController.navigate(MapDestination) },
+            "My quests in progress" to { navController.navigate(ActiveQuestsDestination) },
+            "Abandonment funnel (BQ8)" to { navController.navigate(QuestDropoffDestination) },
+        )
+        composable<OnboardingDestination> {
+            ComingSoon("Onboarding", links = shortcutLinks)
+        }
         // TODO: remove these links when Home has its own navigation
         composable<HomeDestination> {
-            ComingSoon(
-                "Home",
-                links = listOf(
-                    "My quests in progress" to { navController.navigate(ActiveQuestsDestination) },
-                    "Abandonment funnel (BQ8)" to { navController.navigate(QuestDropoffDestination) },
-                ),
-            )
+            ComingSoon("Home", links = shortcutLinks)
         }
         composable<CatalogDestination> { ComponentCatalog(onBack = { navController.popBackStack() }) }
 
