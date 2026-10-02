@@ -19,7 +19,15 @@ sealed interface AppEvent {
     data object SignedIn : AppEvent
     data object SignedOut : AppEvent
 
+    /** The user opened a quest's details (BQ8 funnel: QUEST_VIEWED). */
+    data class QuestViewed(val questId: String) : AppEvent
+
+    /** The user accepted a quest (BQ8 funnel: QUEST_ACCEPTED). */
     data class QuestStarted(val questId: String) : AppEvent
+
+    /** The user opened the directions to the quest's place (BQ8 funnel: NAVIGATION_STARTED). */
+    data class NavigationStarted(val questId: String) : AppEvent
+
     data class QuestAbandoned(val questId: String) : AppEvent
 
     data class ObjectiveCompleted(
