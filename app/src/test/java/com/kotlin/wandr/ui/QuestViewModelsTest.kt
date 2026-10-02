@@ -9,10 +9,13 @@ import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
+import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.TagRepository
+import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
+import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
 import com.kotlin.wandr.domain.model.Tag
 import com.kotlin.wandr.testutil.MainDispatcherRule
@@ -44,6 +47,12 @@ class QuestViewModelsTest {
     private val questRepository = mockk<QuestRepository>()
     private val tagRepository = mockk<TagRepository>()
     private val storageRepository = mockk<StorageRepository>()
+    /** Drop-off data for the smart hint. Default: one abandon of q1 after step 1. */
+    private val analyticsRepository = mockk<AnalyticsRepository> {
+        coEvery { questDropoff() } returns Result.success(
+            QuestDropoffReport(listOf(DropoffPoint("q1", "Quest q1", 2, 1, "Step 1", 1)))
+        )
+    }
     private val bus = AppEventBus()
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
@@ -155,7 +164,7 @@ class QuestViewModelsTest {
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository, bus)
+        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository)
     }
 
     @Test
@@ -194,5 +203,27 @@ class QuestViewModelsTest {
 
         assertEquals(AppError.Network.message, viewModel.uiState.value.errorMessage)
         coVerify(exactly = 0) { questRepository.completeObjective(any(), any(), any()) }
+    }
+
+    // ---------- Smart feature: drop-off hint ----------
+
+    @Test
+    fun `the tracker knows the step where most people give up`() {
+        val viewModel = tracker()
+
+        val risk = viewModel.uiState.value.riskiestStepFor("q1")!!
+        assertEquals(2, risk.stepOrderIndex)
+        assertEquals(1, risk.abandons)
+        assertEquals(null, viewModel.uiState.value.riskiestStepFor("other-quest"))
+    }
+
+    @Test
+    fun `without drop-off data there is no hint and no error`() {
+        coEvery { analyticsRepository.questDropoff() } returns Result.failure(AppException(AppError.Network))
+
+        val viewModel = tracker()
+
+        assertEquals(null, viewModel.uiState.value.riskiestStepFor("q1"))
+        assertEquals(null, viewModel.uiState.value.errorMessage)
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Directions
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.QuestObjective
+import com.kotlin.wandr.domain.model.StepRisk
 import com.kotlin.wandr.ui.components.BadgeStyle
 import com.kotlin.wandr.ui.components.DangerButton
 import com.kotlin.wandr.ui.components.IconCircle
@@ -120,6 +122,7 @@ fun ActiveQuestRoute(
         submittingObjectiveId = state.submittingObjectiveId,
         isAbandoning = state.abandoningQuestId == questId,
         lastResult = state.lastResult,
+        riskyStep = state.riskiestStepFor(questId),
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onCheckObjective = { objective ->
@@ -172,6 +175,8 @@ fun ActiveQuestScreen(
     submittingObjectiveId: String?,
     isAbandoning: Boolean,
     lastResult: ObjectiveResult?,
+    /** Smart feature: the step where most people give up this quest (BQ8 data). */
+    riskyStep: StepRisk?,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onCheckObjective: (QuestObjective) -> Unit,
@@ -208,23 +213,30 @@ fun ActiveQuestScreen(
                 items(quest.objectives, key = { it.id }) { objective ->
                     val isDone = objective.id in quest.completedObjectiveIds
                     val isNext = objective.id == quest.nextObjective?.id
-                    ObjectiveItem(
-                        title = objective.title,
-                        state = when {
-                            isDone -> ObjectiveState.Done
-                            objective.id == submittingObjectiveId -> ObjectiveState.InProgress
-                            else -> ObjectiveState.Pending
-                        },
-                        subtitle = when {
-                            isDone -> "Done"
-                            isNext && objective.requiresPhoto -> "Tap to take the photo"
-                            isNext -> "Tap when you finish this step"
-                            else -> "Step ${objective.orderIndex}"
-                        },
-                        requiresPhoto = objective.requiresPhoto,
-                        // Steps are checked in order, one at a time
-                        onClick = if (isNext && submittingObjectiveId == null) ({ onCheckObjective(objective) }) else null,
-                    )
+                    // A lazy item stacks its children like a Box, so the hint and the step go in a Column
+                    Column {
+                        // Smart feature: warn before the step where most people give up, until it is done
+                        if (!isDone && riskyStep != null && riskyStep.stepOrderIndex == objective.orderIndex) {
+                            DropoffHint(riskyStep, isNext = isNext, modifier = Modifier.padding(bottom = WandrTheme.spacing.sm))
+                        }
+                        ObjectiveItem(
+                            title = objective.title,
+                            state = when {
+                                isDone -> ObjectiveState.Done
+                                objective.id == submittingObjectiveId -> ObjectiveState.InProgress
+                                else -> ObjectiveState.Pending
+                            },
+                            subtitle = when {
+                                isDone -> "Done"
+                                isNext && objective.requiresPhoto -> "Tap to take the photo"
+                                isNext -> "Tap when you finish this step"
+                                else -> "Step ${objective.orderIndex}"
+                            },
+                            requiresPhoto = objective.requiresPhoto,
+                            // Steps are checked in order, one at a time
+                            onClick = if (isNext && submittingObjectiveId == null) ({ onCheckObjective(objective) }) else null,
+                        )
+                    }
                 }
                 item {
                     DangerButton(
@@ -239,6 +251,25 @@ fun ActiveQuestScreen(
     }
 
     if (lastResult != null) ResultDialog(lastResult, onDismiss = onResultShown)
+}
+
+/**
+ * Smart feature: "3 of 4 people who gave up this quest stopped at this step". Uses the BQ8
+ * drop-off data to encourage the user right where others quit.
+ */
+@Composable
+private fun DropoffHint(risk: StepRisk, isNext: Boolean, modifier: Modifier = Modifier) {
+    WandrCard(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = WandrTheme.colors.successContainer,
+        borderColor = WandrTheme.colors.successBorder,
+        contentPadding = WandrTheme.spacing.md,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.xs)) {
+            MetaText(if (isNext) "Tricky step ahead" else "Tricky step later on", Icons.Rounded.Lightbulb)
+            Text(risk.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
 }
 
 @Composable
@@ -331,7 +362,9 @@ private fun ActiveQuestScreenPreview() {
             ),
             place = null,
             isLoading = false, isShowingSavedData = false, submittingObjectiveId = null, isAbandoning = false,
-            lastResult = null, snackbarHostState = SnackbarHostState(),
+            lastResult = null,
+            riskyStep = StepRisk(questId = "q1", stepOrderIndex = 2, abandons = 3, questAbandons = 4),
+            snackbarHostState = SnackbarHostState(),
             onBack = {}, onCheckObjective = {}, onNavigate = {}, onAbandon = {}, onResultShown = {},
         )
     }
