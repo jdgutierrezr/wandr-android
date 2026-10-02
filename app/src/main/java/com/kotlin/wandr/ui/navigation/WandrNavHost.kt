@@ -16,9 +16,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.ui.catalog.ComponentCatalog
+import com.kotlin.wandr.ui.components.LinkButton
+import com.kotlin.wandr.ui.components.map.WandrMap
 import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
+import com.kotlin.wandr.ui.feature.map.MapRoute
 import com.kotlin.wandr.ui.feature.analytics.QuestDropoffRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestsRoute
@@ -30,6 +33,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SignUpDestination
 @Serializable data object OnboardingDestination
 @Serializable data object HomeDestination
+@Serializable data object MapDestination
 @Serializable data object CatalogDestination
 
 // Quest / Progress (BQ8)
@@ -46,7 +50,7 @@ import kotlinx.serialization.Serializable
  * 3. Navigate to it with `navController.navigate(ThatDestination)`.
  */
 @Composable
-fun WandrNavHost(navController: NavHostController = rememberNavController()) {
+fun WandrNavHost(map: WandrMap, navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = LoginDestination) {
 
         composable<LoginDestination> {
@@ -64,6 +68,10 @@ fun WandrNavHost(navController: NavHostController = rememberNavController()) {
                 // Go back instead of stacking a second Login on top
                 onGoToLogin = { navController.popBackStack() },
             )
+        }
+
+        composable<MapDestination> {
+            MapRoute(map = map, onBack = { navController.popBackStack() })
         }
 
         // Placeholders until those screens exist
