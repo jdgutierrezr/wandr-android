@@ -25,6 +25,7 @@ import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
+import com.kotlin.wandr.ui.feature.events.ExploreRoute
 import com.kotlin.wandr.ui.feature.profile.ProfileRoute
 import com.kotlin.wandr.ui.components.LinkButton
 import com.kotlin.wandr.ui.components.map.WandrMap
@@ -45,6 +46,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SignUpDestination
 @Serializable data object OnboardingDestination
 @Serializable data object HomeDestination
+@Serializable data object ExploreDestination
 @Serializable data object MapDestination
 @Serializable data object CatalogDestination
 @Serializable data object ProfileDestination

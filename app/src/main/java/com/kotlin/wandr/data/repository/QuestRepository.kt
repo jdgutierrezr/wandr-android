@@ -86,7 +86,7 @@ class QuestRepositoryImpl @Inject constructor(
         )
 
     override suspend fun recommendedQuests(location: GeoPoint, radiusKm: Double, energyLevel: String, ): Result<List<RecommendedQuestDto>> = safeCall {
-        remote.recommendedQuests(
+        remote.recommendQuests(
             latitude = location.latitude,
             longitude = location.longitude,
             radiusKm = radiusKm,
