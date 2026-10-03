@@ -14,6 +14,7 @@ import com.kotlin.wandr.data.mapper.toDomain
 import com.kotlin.wandr.data.mapper.toEntity
 import com.kotlin.wandr.data.mapper.toRows
 import com.kotlin.wandr.data.remote.datasource.QuestRemoteDataSource
+import com.kotlin.wandr.data.remote.dto.RecommendedQuestDto
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
@@ -36,6 +37,16 @@ interface QuestRepository {
         radiusKm: Double = DEFAULT_RADIUS_KM,
         policy: FetchPolicy = FetchPolicy.NETWORK_FIRST,
     ): Flow<Resource<List<Quest>>>
+
+    /**
+     * Personalized quest recommendations based on location,
+     * user interests and energy level.
+     */
+    suspend fun recommendedQuests(
+        location: GeoPoint,
+        radiusKm: Double = DEFAULT_RADIUS_KM,
+        energyLevel: String = "relaxed",
+    ): Result<List<RecommendedQuestDto>>
 
     /** Quest, place and ordered steps (Quest Details). */
     fun questDetail(questId: String, policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<QuestDetail>>
@@ -73,6 +84,15 @@ class QuestRepositoryImpl @Inject constructor(
                 questDao.replaceNearby(quests.map { it.toEntity() }, tags.map { it.toEntity() })
             },
         )
+
+    override suspend fun recommendedQuests(location: GeoPoint, radiusKm: Double, energyLevel: String, ): Result<List<RecommendedQuestDto>> = safeCall {
+        remote.recommendedQuests(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            radiusKm = radiusKm,
+            energyLevel = energyLevel,
+        )
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun questDetail(questId: String, policy: FetchPolicy): Flow<Resource<QuestDetail>> {
