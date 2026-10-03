@@ -379,8 +379,8 @@ fun WandrNavHost(
 
             ActiveQuestsRoute(
 
-                onBack = {
-                    navController.popBackStack()
+                onSelectTab = { tab ->
+                    navController.openTab(tab)
                 },
 
                 onOpenQuest = { questId ->
@@ -522,8 +522,9 @@ private fun NavHostController.openTab(
             MainTab.MAP ->
                 MapDestination
 
+            // Side quests in progress (Quest / Progress)
             MainTab.SAVED ->
-                HomeDestination
+                ActiveQuestsDestination
 
             MainTab.PROFILE ->
                 ProfileDestination
