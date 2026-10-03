@@ -20,27 +20,33 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.ui.components.BadgeStyle
+import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.components.StatusBadge
+import com.kotlin.wandr.ui.components.WandrBottomBar
 import com.kotlin.wandr.ui.components.WandrCard
 import com.kotlin.wandr.ui.components.WandrProgressBar
 import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/** Quest / Progress: every quest in progress with its progress bar. Tap one to open the tracker. */
+/**
+ * Quest / Progress: every quest in progress with its progress bar. Tap one to open the tracker.
+ * It is the "Saved" tab of the bottom bar, so it has no back arrow.
+ */
 @Composable
 fun ActiveQuestsRoute(
-    onBack: () -> Unit,
+    onSelectTab: (MainTab) -> Unit,
     onOpenQuest: (questId: String) -> Unit,
     viewModel: ActiveQuestViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ActiveQuestsScreen(state = state, onBack = onBack, onOpenQuest = onOpenQuest)
+    ActiveQuestsScreen(state = state, onSelectTab = onSelectTab, onOpenQuest = onOpenQuest)
 }
 
 @Composable
-fun ActiveQuestsScreen(state: ActiveQuestUiState, onBack: () -> Unit, onOpenQuest: (String) -> Unit) {
+fun ActiveQuestsScreen(state: ActiveQuestUiState, onSelectTab: (MainTab) -> Unit, onOpenQuest: (String) -> Unit) {
     Scaffold(
-        topBar = { WandrTopBar(title = "My Quests", onBack = onBack) },
+        topBar = { WandrTopBar(title = "My Quests") },
+        bottomBar = { WandrBottomBar(selected = MainTab.SAVED, onSelect = onSelectTab) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         when {
