@@ -14,6 +14,7 @@ import com.kotlin.wandr.data.repository.LocationRepository
 import com.kotlin.wandr.data.repository.NotificationRepository
 import com.kotlin.wandr.data.repository.PlaceRepository
 import com.kotlin.wandr.data.repository.ProfileRepository
+import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.domain.model.FriendOnMap
 import com.kotlin.wandr.domain.model.Friendship
 import com.kotlin.wandr.domain.model.FriendshipStatus
@@ -28,6 +29,8 @@ import com.kotlin.wandr.domain.model.UserProfile
 import com.kotlin.wandr.domain.model.UserSummary
 import com.kotlin.wandr.testutil.MainDispatcherRule
 import com.kotlin.wandr.testutil.event
+import com.kotlin.wandr.testutil.quest
+import com.kotlin.wandr.ui.components.map.MapMarker
 import com.kotlin.wandr.ui.feature.events.EventsViewModel
 import com.kotlin.wandr.ui.feature.friends.FriendsMapViewModel
 import com.kotlin.wandr.ui.feature.friends.FriendsViewModel
@@ -94,19 +97,40 @@ class SocialViewModelsTest {
 
     // ---------- Map ----------
 
+    private val museum = Place("place-q1", "Museo del Oro", PlaceCategory.MUSEUM, null, GeoPoint(4.6, -74.07), 4.8, null, 1.2)
+
+    private fun mapViewModel(quests: QuestRepository, places: List<Place> = listOf(museum)): MapViewModel {
+        val placeRepository = mockk<PlaceRepository>()
+        every { placeRepository.nearbyPlaces(any(), any(), any(), any()) } returns flowOf(Resource.Success(places))
+        return MapViewModel(quests, placeRepository, locationProvider)
+    }
+
     @Test
-    fun `map reloads places when the category changes`() {
-        val repository = mockk<PlaceRepository>()
-        val museum = Place("p1", "Museo del Oro", PlaceCategory.MUSEUM, null, GeoPoint(4.6, -74.07), 4.8, null, 1.2)
-        every { repository.nearbyPlaces(any(), any(), any(), any()) } returns flowOf(Resource.Success(listOf(museum)))
+    fun `map reloads quests when the radius changes`() {
+        val repository = mockk<QuestRepository>()
+        every { repository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Success(listOf(quest("q1"))))
 
-        val viewModel = MapViewModel(repository, locationProvider)
-        viewModel.selectCategory(PlaceCategory.MUSEUM)
+        val viewModel = mapViewModel(repository)
+        viewModel.setRadius(10.0)
 
-        verify { repository.nearbyPlaces(LocationProvider.BOGOTA_CENTER, 5.0, null, any()) }
-        verify { repository.nearbyPlaces(LocationProvider.BOGOTA_CENTER, 5.0, PlaceCategory.MUSEUM, any()) }
-        assertEquals(listOf(museum), viewModel.uiState.value.places)
+        verify { repository.nearbyQuests(LocationProvider.BOGOTA_CENTER, 5.0, any()) }
+        verify { repository.nearbyQuests(LocationProvider.BOGOTA_CENTER, 10.0, any()) }
+        assertEquals(10.0, viewModel.uiState.value.radiusKm, 0.0)
         assertEquals(location, viewModel.uiState.value.userLocation)
+    }
+
+    @Test
+    fun `map pins each quest on its place`() {
+        val repository = mockk<QuestRepository>()
+        // q2 belongs to "place-q2", which the places list does not have
+        val quests = listOf(quest("q1"), quest("q2"))
+        every { repository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Success(quests))
+
+        val state = mapViewModel(repository).uiState.value
+
+        assertEquals(quests, state.quests)
+        assertEquals(listOf(MapMarker("q1", museum.location, "Quest q1", "Museo del Oro")), state.markers)
+        assertFalse(state.isLoading)
     }
 
     // ---------- Friends on map ----------
@@ -197,6 +221,7 @@ class SocialViewModelsTest {
         every { profileRepository.observeProfile(any()) } returns flowOf(Resource.Success(profile))
         every { profileRepository.observeBadges(any()) } returns flowOf(Resource.Success(emptyList()))
         every { profileRepository.observeQuestHistory(any()) } returns flowOf(Resource.Success(emptyList()))
+        coEvery { profileRepository.streakSummary() } returns Result.failure(AppException(AppError.Network))
 
         val viewModel = ProfileViewModel(profileRepository, mockk<AuthRepository>(), bus)
         assertEquals(profile, viewModel.uiState.value.profile)

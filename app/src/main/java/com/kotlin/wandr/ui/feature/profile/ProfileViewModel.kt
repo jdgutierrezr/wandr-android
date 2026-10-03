@@ -10,9 +10,11 @@ import com.kotlin.wandr.data.repository.AuthRepository
 import com.kotlin.wandr.data.repository.ProfileRepository
 import com.kotlin.wandr.domain.model.EarnedBadge
 import com.kotlin.wandr.domain.model.QuestHistoryItem
+import com.kotlin.wandr.domain.model.StreakSummary
 import com.kotlin.wandr.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,11 @@ data class ProfileUiState(
     val profile: UserProfile? = null,
     val badges: List<EarnedBadge> = emptyList(),
     val history: List<QuestHistoryItem> = emptyList(),
+    /** BQ4: weekly streak, quests per week and achievements. Null until it loads. */
+    val streak: StreakSummary? = null,
+    val isStreakLoading: Boolean = false,
+    /** The streak summary could not be loaded (it needs a connection): show "Try again". */
+    val streakFailed: Boolean = false,
     val isShowingSavedData: Boolean = false,
     /** A quest was just completed somewhere in the app: show the celebration. */
     val celebration: AppEvent.QuestCompleted? = null,
@@ -36,7 +43,7 @@ data class ProfileUiState(
     val errorMessage: String? = null,
 )
 
-/** Profile / Side Quests: level, XP, streak, tier, badges and quest history. */
+/** Profile / Side Quests: level, XP, streak, tier, badges, quest history and the BQ4 streak summary. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -49,6 +56,8 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     private val refreshTrigger = MutableStateFlow(0)
+
+    private var streakJob: Job? = null
 
     init {
         // Observer: these are Room flows, so when the CacheInvalidator refreshes the cache
@@ -64,12 +73,40 @@ class ProfileViewModel @Inject constructor(
             .onEach { (profile, badges, history) -> reduce(profile, badges, history) }
             .launchIn(viewModelScope)
 
+        // Observer: a quest completed anywhere in the app changes the streak and the weekly
+        // numbers, so the summary is downloaded again and the celebration is shown.
         eventBus.subscribe<AppEvent.QuestCompleted>()
-            .onEach { event -> _uiState.update { it.copy(celebration = event) } }
+            .onEach { event ->
+                _uiState.update { it.copy(celebration = event) }
+                loadStreak()
+            }
             .launchIn(viewModelScope)
+
+        loadStreak()
     }
 
-    fun refresh() = refreshTrigger.update { it + 1 }
+    fun refresh() {
+        refreshTrigger.update { it + 1 }
+        loadStreak()
+    }
+
+    /** Downloads the BQ4 summary. Called on start, on refresh, on "Try again" and after a quest. */
+    fun loadStreak() {
+        // The newest request wins: a quest finished while loading must not be missed
+        streakJob?.cancel()
+        _uiState.update { it.copy(isStreakLoading = true, streakFailed = false) }
+        streakJob = viewModelScope.launch {
+            profileRepository.streakSummary()
+                .onSuccess { summary ->
+                    _uiState.update { it.copy(isStreakLoading = false, streak = summary) }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(isStreakLoading = false, streakFailed = true, errorMessage = error.appError.message)
+                    }
+                }
+        }
+    }
 
     fun onCelebrationShown() = _uiState.update { it.copy(celebration = null) }
 

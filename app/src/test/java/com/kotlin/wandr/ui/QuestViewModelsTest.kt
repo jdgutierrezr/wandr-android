@@ -1,6 +1,7 @@
 package com.kotlin.wandr.ui
 
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.AppException
 import com.kotlin.wandr.core.event.AppEvent
@@ -8,10 +9,14 @@ import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
+import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.TagRepository
+import com.kotlin.wandr.domain.model.DropoffPoint
+import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
+import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
 import com.kotlin.wandr.domain.model.Tag
 import com.kotlin.wandr.testutil.MainDispatcherRule
@@ -20,6 +25,7 @@ import com.kotlin.wandr.testutil.objective
 import com.kotlin.wandr.testutil.quest
 import com.kotlin.wandr.ui.feature.home.HomeViewModel
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestViewModel
+import com.kotlin.wandr.ui.feature.quest.LocationStatus
 import com.kotlin.wandr.ui.feature.quest.QuestDetailViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -27,6 +33,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -43,9 +50,22 @@ class QuestViewModelsTest {
     private val questRepository = mockk<QuestRepository>()
     private val tagRepository = mockk<TagRepository>()
     private val storageRepository = mockk<StorageRepository>()
+    /** Drop-off data for the smart hint. Default: one abandon of q1 after step 1. */
+    private val analyticsRepository = mockk<AnalyticsRepository> {
+        coEvery { questDropoff() } returns Result.success(
+            QuestDropoffReport(listOf(DropoffPoint("q1", "Quest q1", 2, 1, "Step 1", 1)))
+        )
+    }
     private val bus = AppEventBus()
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
+
+    /** GPS for the Active Quest tests: the test pushes readings into [gps]. */
+    private val gps = MutableSharedFlow<UserLocation>(extraBufferCapacity = 8)
+    private val trackerLocation = mockk<LocationProvider> {
+        coEvery { currentLocation() } returns UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
+        every { locationUpdates(any(), any()) } returns gps
+    }
 
     // ---------- Home ----------
 
@@ -102,7 +122,7 @@ class QuestViewModelsTest {
         every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
         coEvery { questRepository.startQuest("q1") } returns Result.success(Unit)
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
         assertEquals(detail, viewModel.uiState.value.detail)
         assertFalse(viewModel.uiState.value.isInProgress)
 
@@ -118,20 +138,43 @@ class QuestViewModelsTest {
         coEvery { questRepository.startQuest("q1") } returns
             Result.failure(AppException(AppError.Server("You already completed this quest")))
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
         assertTrue(viewModel.uiState.value.isInProgress)
         viewModel.startQuest()
         assertEquals("You already completed this quest", viewModel.uiState.value.errorMessage)
     }
 
+    @Test
+    fun `quest detail reports QUEST_VIEWED once per visit (BQ8)`() = runTest {
+        every { questRepository.questDetail("q1", any()) } returns flowOf(Resource.Loading)
+        every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
+
+        bus.subscribe<AppEvent.QuestViewed>().test {
+            viewModel.onScreenShown()
+            viewModel.onScreenShown() // e.g. after a rotation
+            assertEquals(AppEvent.QuestViewed("q1"), awaitItem())
+            expectNoEvents()
+        }
+    }
+
     // ---------- Active quest ----------
+
+    @Test
+    fun `navigate reports NAVIGATION_STARTED (BQ8)`() = runTest {
+        val viewModel = tracker()
+        bus.subscribe<AppEvent.NavigationStarted>().test {
+            viewModel.startNavigation("q1")
+            assertEquals(AppEvent.NavigationStarted("q1"), awaitItem())
+        }
+    }
 
     private val photoStep = objective("o2", "q1", 2, requiresPhoto = true)
     private val active = activeQuest("q1", listOf(objective("o1", "q1", 1), photoStep), done = setOf("o1"))
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository)
+        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository, trackerLocation)
     }
 
     @Test
@@ -170,5 +213,65 @@ class QuestViewModelsTest {
 
         assertEquals(AppError.Network.message, viewModel.uiState.value.errorMessage)
         coVerify(exactly = 0) { questRepository.completeObjective(any(), any(), any()) }
+    }
+
+    // ---------- Smart feature: drop-off hint ----------
+
+    @Test
+    fun `the tracker knows the step where most people give up`() {
+        val viewModel = tracker()
+
+        val risk = viewModel.uiState.value.riskiestStepFor("q1")!!
+        assertEquals(2, risk.stepOrderIndex)
+        assertEquals(1, risk.abandons)
+        assertEquals(null, viewModel.uiState.value.riskiestStepFor("other-quest"))
+    }
+
+    @Test
+    fun `without drop-off data there is no hint and no error`() {
+        coEvery { analyticsRepository.questDropoff() } returns Result.failure(AppException(AppError.Network))
+
+        val viewModel = tracker()
+
+        assertEquals(null, viewModel.uiState.value.riskiestStepFor("q1"))
+        assertEquals(null, viewModel.uiState.value.errorMessage)
+    }
+
+    // ---------- Context-aware: live distance ----------
+
+    private val monserrate = GeoPoint(4.6058, -74.0565)
+
+    @Test
+    fun `the live distance follows the GPS and detects the arrival`() {
+        val viewModel = tracker()
+        viewModel.trackDistanceTo(monserrate)
+
+        // First fix is FALLBACK (no real position): the distance stays unknown, and the screen says why
+        assertEquals(null, viewModel.uiState.value.liveDistance)
+        assertEquals(LocationStatus.NO_FIX, viewModel.uiState.value.locationStatus)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6097, -74.0817), UserLocation.Source.CURRENT))
+        assertEquals(LocationStatus.LIVE, viewModel.uiState.value.locationStatus)
+        val far = viewModel.uiState.value.liveDistance!!
+        assertTrue(far.meters > 2_000)
+        assertFalse(far.hasArrived)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6059, -74.0566), UserLocation.Source.CURRENT))
+        assertTrue(viewModel.uiState.value.liveDistance!!.hasArrived)
+    }
+
+    @Test
+    fun `a remembered position is marked as approximate and stopping freezes the distance`() {
+        val viewModel = tracker()
+        viewModel.trackDistanceTo(monserrate)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6097, -74.0817), UserLocation.Source.LAST_KNOWN))
+        assertTrue(viewModel.uiState.value.liveDistance!!.isApproximate)
+
+        viewModel.stopTrackingDistance()
+        assertEquals(LocationStatus.OFF, viewModel.uiState.value.locationStatus)
+        val before = viewModel.uiState.value.liveDistance
+        gps.tryEmit(UserLocation(GeoPoint(4.6059, -74.0566), UserLocation.Source.CURRENT))
+        assertEquals(before, viewModel.uiState.value.liveDistance)
     }
 }

@@ -36,9 +36,9 @@ class AuthRepositoryImpl @Inject constructor(
                     status.session.user?.id?.let(SessionState::SignedIn) ?: SessionState.SignedOut
                 is SessionStatus.NotAuthenticated -> SessionState.SignedOut
                 is SessionStatus.Initializing -> SessionState.Loading
-                // Refreshing the token failed (usually offline): the saved session is still usable
-                is SessionStatus.RefreshFailure ->
-                    remote.currentUserId()?.let(SessionState::SignedIn) ?: SessionState.SignedOut
+                // Refreshing the token failed (usually offline): the saved session is still there.
+                // It must not count as signed out, or the session gate would send the user to Login.
+                is SessionStatus.RefreshFailure -> SessionState.Reconnecting
             }
         }
         .distinctUntilChanged()

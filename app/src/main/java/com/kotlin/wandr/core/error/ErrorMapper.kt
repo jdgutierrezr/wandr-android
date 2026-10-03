@@ -1,5 +1,6 @@
 package com.kotlin.wandr.core.error
 
+import android.util.Log
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.exceptions.UnauthorizedRestException
@@ -31,5 +32,10 @@ suspend fun <T> safeCall(block: suspend () -> T): Result<T> = try {
 } catch (e: CancellationException) {
     throw e
 } catch (e: Throwable) {
-    Result.failure(AppException(ErrorMapper.map(e)))
+    val error = ErrorMapper.map(e)
+    // The UI only shows a friendly message; Logcat keeps the real cause (filter by "WandrError")
+    Log.w(LOG_TAG, "${error::class.simpleName}: ${error.message}", e)
+    Result.failure(AppException(error))
 }
+
+private const val LOG_TAG = "WandrError"

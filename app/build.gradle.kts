@@ -34,6 +34,8 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${secret("SUPABASE_PUBLISHABLE_KEY")}\"")
+        // Read by the Google Maps SDK from the Manifest
+        manifestPlaceholders["MAPS_API_KEY"] = secret("MAPS_API_KEY")
     }
 
     buildTypes {
@@ -100,6 +102,10 @@ dependencies {
     // Location
     implementation(libs.play.services.location)
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // Map
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 

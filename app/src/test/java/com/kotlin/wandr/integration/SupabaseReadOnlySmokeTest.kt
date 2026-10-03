@@ -1,6 +1,7 @@
 package com.kotlin.wandr.integration
 
 import com.kotlin.wandr.BuildConfig
+import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.EventRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.FriendRemoteDataSource
@@ -13,6 +14,7 @@ import com.kotlin.wandr.data.remote.datasource.TagRemoteDataSource
 import com.kotlin.wandr.data.mapper.toDomain
 import com.kotlin.wandr.data.mapper.toEntity
 import com.kotlin.wandr.data.mapper.toRows
+import com.kotlin.wandr.domain.model.QuestDropoffReport
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.MemoryCodeVerifierCache
 import io.github.jan.supabase.auth.MemorySessionManager
@@ -60,6 +62,14 @@ class SupabaseReadOnlySmokeTest {
         println("badges: " + profile.fetchBadges().map { it.toEntity().toDomain() })
         println("history: " + profile.fetchQuestHistory().map { it.toEntity() })
 
+        // BQ4: get_streak_summary (same RPC as iOS)
+        val streak = profile.fetchStreakSummary().toDomain()
+        println("streak summary: $streak, comparison=${streak.weekComparison?.message}")
+        assertEquals(7, streak.thisWeek.size)
+        assertEquals(4, streak.weeklyHistory.size)
+        assertEquals(me.currentXp, streak.points)
+        assertEquals(me.currentStreak, streak.currentStreak)
+
         val tags = TagRemoteDataSource(supabase)
         println("tags: " + tags.fetchTags().map { it.name })
         println("interests: " + tags.fetchInterestIds())
@@ -74,6 +84,11 @@ class SupabaseReadOnlySmokeTest {
             detail.questObjectives.map { "${it.orderIndex}:${it.title}" } + ", tags=" + detail.questTags.map { it.tags.name })
         assertEquals(detail.questObjectives.sortedBy { it.orderIndex }, detail.questObjectives)
         println("active: " + quests.activeCompletions().map { it.toRows() })
+
+        // BQ8: get_quest_dropoff. The seed has at least one abandoned quest (Camila, Jazz al Parque)
+        val dropoff = QuestDropoffReport(AnalyticsRemoteDataSource(supabase).questDropoff().map { it.toDomain() })
+        println("dropoff: worst=${dropoff.worstPoint?.label} byPosition=${dropoff.abandonsByPosition}")
+        assertTrue("seed has abandoned quests", dropoff.totalAbandoned > 0)
 
         val places = PlaceRemoteDataSource(supabase)
         println("nearby places: " + places.nearbyPlaces(4.6097, -74.0817, 15.0, null).map { it.toEntity().toDomain() })
