@@ -21,11 +21,6 @@ import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Refresh
@@ -42,15 +37,11 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +60,8 @@ import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.RecommendedQuest
 import com.kotlin.wandr.ui.theme.WandrTheme
+import com.kotlin.wandr.ui.components.MainTab
+import com.kotlin.wandr.ui.components.WandrBottomBar
 
 
 // =============================================================
@@ -78,9 +71,8 @@ import com.kotlin.wandr.ui.theme.WandrTheme
 @Composable
 fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
-    onExplore: () -> Unit = {},
+    onSelectTab: (MainTab) -> Unit = {},
 ) {
-
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     HomeScreen(
@@ -91,10 +83,9 @@ fun HomeRoute(
         onRadiusSelected = viewModel::selectRadius,
         onRevealMystery = viewModel::revealMysteryQuest,
         onSkipMystery = viewModel::skipMysteryQuest,
-        onExplore = onExplore,
+        onSelectTab = onSelectTab,
     )
 }
-
 
 // =============================================================
 // MAIN SCREEN
@@ -109,10 +100,8 @@ fun HomeScreen(
     onRadiusSelected: (Double) -> Unit,
     onRevealMystery: () -> Unit,
     onSkipMystery: () -> Unit,
-    onExplore: () -> Unit = {},
+    onSelectTab: (MainTab) -> Unit = {},
 ) {
-    var selectedNavItem by remember { mutableStateOf(0) }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -264,70 +253,13 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        WandrBottomNavigation(
-            selectedItem = selectedNavItem,
-            onItemSelected = { index ->
-                selectedNavItem = index
-                if (index == 1) {
-                    onExplore()
-                }
-            },
+        WandrBottomBar(
+            selected = MainTab.HOME,
+            onSelect = onSelectTab,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
         )
-    }
-}
-
-
-// =============================================================
-// BOTTOM NAVIGATION
-// =============================================================
-
-@Composable
-private fun WandrBottomNavigation(
-    selectedItem: Int,
-    onItemSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val items = listOf(
-        Triple("Home", Icons.Outlined.Home, 0),
-        Triple("Explore", Icons.Outlined.Explore, 1),
-        Triple("Map", Icons.Outlined.Map, 2),
-        Triple("Saved", Icons.Outlined.BookmarkBorder, 3),
-        Triple("Profile", Icons.Outlined.PersonOutline, 4),
-    )
-
-    NavigationBar(
-        modifier = modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-    ) {
-        items.forEach { (label, icon, index) ->
-            NavigationBarItem(
-                selected = selectedItem == index,
-                onClick = { onItemSelected(index) },
-                icon = {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                    )
-                },
-                label = {
-                    Text(
-                        text = label,
-                        maxLines = 1,
-                    )
-                },
-                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                ),
-            )
-        }
     }
 }
 
