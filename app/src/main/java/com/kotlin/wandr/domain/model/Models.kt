@@ -72,6 +72,12 @@ data class Quest(
     val distanceKm: Double?,
 )
 
+data class RecommendedQuest(
+    val quest: Quest,
+    val matchedInterests: List<String>,
+    val energyMatch: Boolean,
+)
+
 data class QuestObjective(
     val id: String,
     val questId: String,

@@ -13,10 +13,12 @@ import com.kotlin.wandr.data.remote.dto.ObjectiveDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveResultDto
 import com.kotlin.wandr.data.remote.dto.QuestDetailDto
 import com.kotlin.wandr.data.remote.dto.QuestTagDto
+import com.kotlin.wandr.data.remote.dto.RecommendedQuestDto
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.QuestObjective
+import com.kotlin.wandr.domain.model.RecommendedQuest
 import com.kotlin.wandr.domain.model.Tier
 
 // ---------- Quests ----------
@@ -66,6 +68,25 @@ fun QuestWithTags.toDomain() = Quest(
     distanceKm = quest.distanceKm,
 )
 
+fun RecommendedQuestDto.toDomain() = Quest(
+    id = id,
+    title = title,
+    description = description,
+    difficultyLevel = difficulty_level,
+    estimatedDurationMin = estimated_duration,
+    pointsReward = points_reward,
+    coverImageUrl = cover_image_url,
+    placeId = place_id,
+    placeName = place_name,
+    tags = emptyList(),
+    distanceKm = distance_km,
+)
+
+fun RecommendedQuestDto.toRecommendedQuest() = RecommendedQuest(
+    quest = toDomain(),
+    matchedInterests = emptyList(),
+    energyMatch = energy_match,
+)
 // ---------- Objectives ----------
 
 fun ObjectiveDto.toEntity() = ObjectiveEntity(

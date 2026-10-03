@@ -16,6 +16,7 @@ import com.kotlin.wandr.ui.catalog.ComponentCatalog
 import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
+import com.kotlin.wandr.ui.feature.events.ExploreRoute
 import kotlinx.serialization.Serializable
 
 /** Every screen of the app is a route. Type-safe: arguments are properties of the class. */
@@ -23,6 +24,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SignUpDestination
 @Serializable data object OnboardingDestination
 @Serializable data object HomeDestination
+@Serializable data object ExploreDestination
 @Serializable data object CatalogDestination
 
 /**
@@ -54,7 +56,16 @@ fun WandrNavHost(navController: NavHostController = rememberNavController()) {
 
         // Placeholders until those screens exist
         composable<OnboardingDestination> { ComingSoon("Onboarding") }
-        composable<HomeDestination> { ComingSoon("Home") }
+        composable<HomeDestination> {
+            com.kotlin.wandr.ui.feature.home.HomeRoute(
+                onExplore = { navController.navigate(ExploreDestination) },
+            )
+        }
+        composable<ExploreDestination> {
+            ExploreRoute(
+                onHome = { navController.popBackStack() },
+            )
+        }
         composable<CatalogDestination> { ComponentCatalog(onBack = { navController.popBackStack() }) }
     }
 }

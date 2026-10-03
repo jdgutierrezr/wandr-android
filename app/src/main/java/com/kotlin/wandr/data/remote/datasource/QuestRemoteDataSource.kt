@@ -6,6 +6,7 @@ import com.kotlin.wandr.data.remote.dto.NearbyQuestDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveResultDto
 import com.kotlin.wandr.data.remote.dto.QuestDetailDto
 import com.kotlin.wandr.data.remote.dto.QuestTagDto
+import com.kotlin.wandr.data.remote.dto.RecommendedQuestDto
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -33,6 +34,18 @@ class QuestRemoteDataSource @Inject constructor(
         ).decodeList()
 
     /** `nearby_quests` does not return tags, so they are fetched for those quests in one call. */
+
+    suspend fun recommendQuests(latitude: Double, longitude: Double, radiusKm: Double, energyLevel: String, ): List<RecommendedQuestDto> =
+        supabase.postgrest.rpc(
+            "recommend_quests",
+            buildJsonObject {
+                put("p_lat", latitude)
+                put("p_lng", longitude)
+                put("p_radius_km", radiusKm)
+                put("p_energy_level", energyLevel)
+            },
+        ).decodeList()
+
     suspend fun tagsFor(questIds: List<String>): List<QuestTagDto> {
         if (questIds.isEmpty()) return emptyList()
         return supabase.from("quest_tags")
