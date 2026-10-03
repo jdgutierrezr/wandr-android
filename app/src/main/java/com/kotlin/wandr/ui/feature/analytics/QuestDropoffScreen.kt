@@ -117,6 +117,7 @@ fun QuestDropoffScreen(
                 verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.md),
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
+                item { StatusBadge(text = "Internal · team analytics (BQ8, Type 3)", style = BadgeStyle.Neutral) }
                 report.worstPoint?.let { item { AnswerCard(it, report.totalAbandoned) } }
                 item { AllQuestsCard(report) }
                 item { SectionLabel("By quest", trailing = "${report.quests.size} quests") }

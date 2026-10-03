@@ -485,7 +485,7 @@ com.kotlin.wandr
 | Quest Details | `QuestDetailViewModel` + `QuestDetailScreen` | Quest (publishes `QuestViewed`) |
 | Active Quest / Navigation | `ActiveQuestViewModel` + `ActiveQuestScreen` | Quest, Storage (publishes `NavigationStarted`) |
 | My Quests (in progress) | `ActiveQuestViewModel` + `ActiveQuestsScreen` | Quest |
-| Abandonment Funnel (BQ8) | `QuestDropoffViewModel` + `QuestDropoffScreen` | Analytics (`get_quest_dropoff` RPC) |
+| Abandonment Funnel (BQ8, internal, debug builds only) | `QuestDropoffViewModel` + `QuestDropoffScreen` | Analytics (`get_quest_dropoff` RPC) |
 | Map | `MapViewModel` | Place + LocationProvider |
 | Friends on Quest | `FriendsMapViewModel` | Location + LocationProvider |
 | Events | `EventsViewModel` | Event |
@@ -518,8 +518,10 @@ flowchart LR
     QR -->|"abandon_quest keeps the checked steps"| QC --> RPC --> Screen
 ```
 
-- **Answer (in the app):** `get_quest_dropoff()` reads every abandoned quest and the last step that was checked, and the
-  Abandonment Funnel screen shows the quest + step with most abandons and the totals per step.
+- **Answer (for the team):** `get_quest_dropoff()` reads every abandoned quest and the last step that was checked, and the
+  Abandonment Funnel screen shows the quest + step with most abandons and the totals per step. BQ8 is Type 3 (features
+  analysis), so this screen is an internal tool: it is only reachable from Profile in **debug builds**.
+- **For the user:** the same data powers the drop-off hint in Active Quest (smart feature).
 - **Funnel events:** `quest_viewed → quest_accepted → navigation_started → quest_completed / quest_abandoned` go to
   `telemetry_events` with `duration_ms` = time since the previous step. They also show the drop-off *before* a quest
   is started (viewed but never accepted). The SQL is in `telemetry.sql` of the backend repo.

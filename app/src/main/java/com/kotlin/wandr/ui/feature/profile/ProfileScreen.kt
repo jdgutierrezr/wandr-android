@@ -45,6 +45,7 @@ import com.kotlin.wandr.domain.model.WeeklyQuests
 import com.kotlin.wandr.ui.components.AchievementCard
 import com.kotlin.wandr.ui.components.Avatar
 import com.kotlin.wandr.ui.components.BadgeStyle
+import com.kotlin.wandr.ui.components.LinkButton
 import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.components.MilestoneCard
 import com.kotlin.wandr.ui.components.SecondaryButton
@@ -77,6 +78,8 @@ private val BOGOTA = ZoneId.of("America/Bogota")
 fun ProfileRoute(
     onSignedOut: () -> Unit,
     onSelectTab: (MainTab) -> Unit,
+    /** Debug builds only: opens the BQ8 abandonment funnel (internal team analytics). */
+    onOpenTeamAnalytics: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,6 +107,7 @@ fun ProfileRoute(
         onRetryStreak = viewModel::loadStreak,
         onSignOut = viewModel::signOut,
         onSelectTab = onSelectTab,
+        onOpenTeamAnalytics = onOpenTeamAnalytics,
     )
 }
 
@@ -115,6 +119,7 @@ fun ProfileScreen(
     onRetryStreak: () -> Unit,
     onSignOut: () -> Unit,
     onSelectTab: (MainTab) -> Unit,
+    onOpenTeamAnalytics: (() -> Unit)? = null,
     todayIndex: Int = LocalDate.now(BOGOTA).dayOfWeek.value - 1,
 ) {
     val profile = state.profile
@@ -185,6 +190,11 @@ fun ProfileScreen(
                 }
                 state.isStreakLoading -> item { StreakLoadingCard() }
                 state.streakFailed -> item { StreakErrorCard(onRetry = onRetryStreak) }
+            }
+
+            // Internal tool, only in debug builds (same idea as "Design system (debug)" on Login)
+            if (onOpenTeamAnalytics != null) {
+                item { LinkButton(text = "Team analytics · BQ8 funnel (debug)", onClick = onOpenTeamAnalytics) }
             }
         }
     }
