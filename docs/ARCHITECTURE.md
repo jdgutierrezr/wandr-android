@@ -526,3 +526,14 @@ flowchart LR
 - **Progress persistence:** active quests and checked steps live in Room (`activeQuests`), so the tracker keeps the
   progress offline and after the app is closed.
 
+## Live distance in Active Quest (context-aware + GPS)
+
+While Active Quest is visible, `ActiveQuestViewModel.trackDistanceTo()` follows `LocationProvider.locationUpdates()`
+(every 5 s or 10 m) and calculates the straight-line distance to the quest's place on the phone
+(`GeoPoint.distanceMetersTo`, haversine). No maps service is called.
+
+- Within 100 m the screen shows "You've arrived!" with the next step.
+- A remembered position (`LAST_KNOWN`) is shown as approximate; without permission or a fix (`FALLBACK`) the
+  live distance is hidden.
+- The GPS stops when the screen is paused or closed (`LifecycleResumeEffect`), to save battery (QS5).
+

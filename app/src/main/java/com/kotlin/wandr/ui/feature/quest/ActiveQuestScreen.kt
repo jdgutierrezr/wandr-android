@@ -1,8 +1,10 @@
 package com.kotlin.wandr.ui.feature.quest
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.rounded.Directions
+import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material3.AlertDialog
@@ -41,9 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kotlin.wandr.domain.model.ActiveQuest
+import com.kotlin.wandr.domain.model.LiveDistance
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.QuestObjective
@@ -102,6 +108,21 @@ fun ActiveQuestRoute(
 
     val quest = state.quests.firstOrNull { it.questId == questId }
 
+    // ---------- Context-aware: live distance from the GPS ----------
+    var hasLocationPermission by remember { mutableStateOf(context.hasLocationPermission()) }
+    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        hasLocationPermission = granted.values.any { it }
+    }
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) askLocation.launch(LOCATION_PERMISSIONS)
+    }
+    val destination = detailState.detail?.place?.location
+    // Only while the screen is visible: the GPS stops when the user leaves or the app goes to the background
+    LifecycleResumeEffect(destination, hasLocationPermission) {
+        if (destination != null && hasLocationPermission) viewModel.trackDistanceTo(destination)
+        onPauseOrDispose { viewModel.stopTrackingDistance() }
+    }
+
     // After giving up, the quest leaves the active list: go back
     LaunchedEffect(abandonRequested, quest, state.abandoningQuestId) {
         if (abandonRequested && quest == null && state.abandoningQuestId == null) onBack()
@@ -123,6 +144,10 @@ fun ActiveQuestRoute(
         isAbandoning = state.abandoningQuestId == questId,
         lastResult = state.lastResult,
         riskyStep = state.riskiestStepFor(questId),
+        liveDistance = state.liveDistance,
+        locationStatus = state.locationStatus,
+        hasLocationPermission = hasLocationPermission,
+        onAllowLocation = { askLocation.launch(LOCATION_PERMISSIONS) },
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onCheckObjective = { objective ->
@@ -177,6 +202,11 @@ fun ActiveQuestScreen(
     lastResult: ObjectiveResult?,
     /** Smart feature: the step where most people give up this quest (BQ8 data). */
     riskyStep: StepRisk?,
+    /** Context-aware: distance from the GPS to the place. Null = unknown (no permission / no fix). */
+    liveDistance: LiveDistance?,
+    locationStatus: LocationStatus,
+    hasLocationPermission: Boolean,
+    onAllowLocation: () -> Unit,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onCheckObjective: (QuestObjective) -> Unit,
@@ -208,7 +238,19 @@ fun ActiveQuestScreen(
                     item { StatusBadge(text = "Offline · your progress is saved on the phone", style = BadgeStyle.Neutral) }
                 }
                 item { ProgressHeader(quest) }
-                item { DestinationCard(place = place, onNavigate = onNavigate) }
+                if (liveDistance?.hasArrived == true) {
+                    item { ArrivedBanner(nextStep = quest.nextObjective?.title) }
+                }
+                item {
+                    DestinationCard(
+                        place = place,
+                        liveDistance = liveDistance,
+                        locationStatus = locationStatus,
+                        hasLocationPermission = hasLocationPermission,
+                        onAllowLocation = onAllowLocation,
+                        onNavigate = onNavigate,
+                    )
+                }
                 item { SectionLabel("Objectives", trailing = "${quest.completedCount} of ${quest.totalCount}") }
                 items(quest.objectives, key = { it.id }) { objective ->
                     val isDone = objective.id in quest.completedObjectiveIds
@@ -253,6 +295,25 @@ fun ActiveQuestScreen(
     if (lastResult != null) ResultDialog(lastResult, onDismiss = onResultShown)
 }
 
+/** Context-aware: shown when the GPS says the user is at the quest's place. */
+@Composable
+private fun ArrivedBanner(nextStep: String?) {
+    WandrCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.primary,
+        borderColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.xs)) {
+            Text("You've arrived!", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimary)
+            Text(
+                nextStep?.let { "Next step: $it" } ?: "Check your steps below.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+        }
+    }
+}
+
 /**
  * Smart feature: "3 of 4 people who gave up this quest stopped at this step". Uses the BQ8
  * drop-off data to encourage the user right where others quit.
@@ -289,7 +350,14 @@ private fun ProgressHeader(quest: ActiveQuest) {
 }
 
 @Composable
-private fun DestinationCard(place: Place?, onNavigate: (Place) -> Unit) {
+private fun DestinationCard(
+    place: Place?,
+    liveDistance: LiveDistance?,
+    locationStatus: LocationStatus,
+    hasLocationPermission: Boolean,
+    onAllowLocation: () -> Unit,
+    onNavigate: (Place) -> Unit,
+) {
     WandrCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm)) {
             SectionLabel("Destination")
@@ -298,7 +366,19 @@ private fun DestinationCard(place: Place?, onNavigate: (Place) -> Unit) {
             } else {
                 Text(place.name, style = MaterialTheme.typography.titleMedium)
                 place.address?.let { MetaText(it, Icons.Outlined.LocationOn) }
-                place.distanceKm?.let { MetaText("%.1f km away".format(it), Icons.Rounded.Directions) }
+                when {
+                    // Live from the GPS, updated while the user walks
+                    liveDistance != null -> StatusBadge(text = liveDistance.label, icon = Icons.Rounded.MyLocation)
+                    !hasLocationPermission -> TextButton(onClick = onAllowLocation) {
+                        Text("Allow location to see how far you are")
+                    }
+                    locationStatus == LocationStatus.SEARCHING ->
+                        MetaText("Finding your location…", Icons.Rounded.MyLocation)
+                    locationStatus == LocationStatus.NO_FIX ->
+                        MetaText("Location unavailable. Turn on location to see the distance", Icons.Rounded.MyLocation)
+                    // Otherwise, the distance calculated when the quest list was loaded
+                    place.distanceKm != null -> MetaText("%.1f km away".format(place.distanceKm), Icons.Rounded.Directions)
+                }
                 PrimaryButton(
                     text = "Navigate",
                     onClick = { onNavigate(place) },
@@ -346,6 +426,15 @@ private fun Context.openDirections(place: Place): Boolean {
     }
 }
 
+private val LOCATION_PERMISSIONS = arrayOf(
+    Manifest.permission.ACCESS_FINE_LOCATION,
+    Manifest.permission.ACCESS_COARSE_LOCATION,
+)
+
+private fun Context.hasLocationPermission(): Boolean = LOCATION_PERMISSIONS.any {
+    ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+}
+
 private fun Bitmap.toJpeg(): ByteArray = ByteArrayOutputStream().use { out ->
     compress(Bitmap.CompressFormat.JPEG, 85, out)
     out.toByteArray()
@@ -364,6 +453,10 @@ private fun ActiveQuestScreenPreview() {
             isLoading = false, isShowingSavedData = false, submittingObjectiveId = null, isAbandoning = false,
             lastResult = null,
             riskyStep = StepRisk(questId = "q1", stepOrderIndex = 2, abandons = 3, questAbandons = 4),
+            liveDistance = LiveDistance(meters = 350.0),
+            locationStatus = LocationStatus.LIVE,
+            hasLocationPermission = true,
+            onAllowLocation = {},
             snackbarHostState = SnackbarHostState(),
             onBack = {}, onCheckObjective = {}, onNavigate = {}, onAbandon = {}, onResultShown = {},
         )

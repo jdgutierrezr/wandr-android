@@ -14,6 +14,7 @@ import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.TagRepository
 import com.kotlin.wandr.domain.model.DropoffPoint
+import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
@@ -24,6 +25,7 @@ import com.kotlin.wandr.testutil.objective
 import com.kotlin.wandr.testutil.quest
 import com.kotlin.wandr.ui.feature.home.HomeViewModel
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestViewModel
+import com.kotlin.wandr.ui.feature.quest.LocationStatus
 import com.kotlin.wandr.ui.feature.quest.QuestDetailViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,6 +33,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -56,6 +59,13 @@ class QuestViewModelsTest {
     private val bus = AppEventBus()
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
+
+    /** GPS for the Active Quest tests: the test pushes readings into [gps]. */
+    private val gps = MutableSharedFlow<UserLocation>(extraBufferCapacity = 8)
+    private val trackerLocation = mockk<LocationProvider> {
+        coEvery { currentLocation() } returns UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
+        every { locationUpdates(any(), any()) } returns gps
+    }
 
     // ---------- Home ----------
 
@@ -164,7 +174,7 @@ class QuestViewModelsTest {
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository)
+        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository, trackerLocation)
     }
 
     @Test
@@ -225,5 +235,43 @@ class QuestViewModelsTest {
 
         assertEquals(null, viewModel.uiState.value.riskiestStepFor("q1"))
         assertEquals(null, viewModel.uiState.value.errorMessage)
+    }
+
+    // ---------- Context-aware: live distance ----------
+
+    private val monserrate = GeoPoint(4.6058, -74.0565)
+
+    @Test
+    fun `the live distance follows the GPS and detects the arrival`() {
+        val viewModel = tracker()
+        viewModel.trackDistanceTo(monserrate)
+
+        // First fix is FALLBACK (no real position): the distance stays unknown, and the screen says why
+        assertEquals(null, viewModel.uiState.value.liveDistance)
+        assertEquals(LocationStatus.NO_FIX, viewModel.uiState.value.locationStatus)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6097, -74.0817), UserLocation.Source.CURRENT))
+        assertEquals(LocationStatus.LIVE, viewModel.uiState.value.locationStatus)
+        val far = viewModel.uiState.value.liveDistance!!
+        assertTrue(far.meters > 2_000)
+        assertFalse(far.hasArrived)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6059, -74.0566), UserLocation.Source.CURRENT))
+        assertTrue(viewModel.uiState.value.liveDistance!!.hasArrived)
+    }
+
+    @Test
+    fun `a remembered position is marked as approximate and stopping freezes the distance`() {
+        val viewModel = tracker()
+        viewModel.trackDistanceTo(monserrate)
+
+        gps.tryEmit(UserLocation(GeoPoint(4.6097, -74.0817), UserLocation.Source.LAST_KNOWN))
+        assertTrue(viewModel.uiState.value.liveDistance!!.isApproximate)
+
+        viewModel.stopTrackingDistance()
+        assertEquals(LocationStatus.OFF, viewModel.uiState.value.locationStatus)
+        val before = viewModel.uiState.value.liveDistance
+        gps.tryEmit(UserLocation(GeoPoint(4.6059, -74.0566), UserLocation.Source.CURRENT))
+        assertEquals(before, viewModel.uiState.value.liveDistance)
     }
 }
