@@ -137,6 +137,9 @@ fun WandrNavHost(
             ProfileRoute(
                 onSignedOut = { navController.leaveToLogin() },
                 onSelectTab = { tab -> navController.openTab(tab) },
+                // BQ8 is Type 3 (features analysis): an internal tool for the team, not for users.
+                // Only debug builds show the entry; the release app never does.
+                onOpenTeamAnalytics = if (BuildConfig.DEBUG) ({ navController.navigate(QuestDropoffDestination) }) else null,
             )
         }
 
