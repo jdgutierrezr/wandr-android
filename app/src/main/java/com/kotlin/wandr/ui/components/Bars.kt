@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kotlin.wandr.ui.theme.WandrTheme
+import androidx.compose.material.icons.filled.*
 
 /**
  * Top bar of the main screens: "Discovery Map  🔥3 ...... [filters] [bell] [avatar]".
@@ -75,12 +76,34 @@ fun NotificationsAction(unreadCount: Int, onClick: () -> Unit) {
 }
 
 /** Tabs of the bottom bar, in the order of the mockups. */
-enum class MainTab(val label: String, val icon: ImageVector) {
-    MAP("Map", Icons.Outlined.Explore),
-    FRIENDS("Friends", Icons.Outlined.Group),
-    EVENTS("Events", Icons.Outlined.CalendarMonth),
-    LEADERBOARD("Leaderboard", Icons.Outlined.EmojiEvents),
-    PROFILE("Profile", Icons.Outlined.Person),
+enum class MainTab(
+    val label: String,
+    val icon: ImageVector,
+) {
+    HOME(
+        label = "Home",
+        icon = Icons.Filled.Home,
+    ),
+
+    EXPLORE(
+        label = "Explore",
+        icon = Icons.Outlined.Explore,
+    ),
+
+    MAP(
+        label = "Map",
+        icon = Icons.Filled.Map,
+    ),
+
+    SAVED(
+        label = "Saved",
+        icon = Icons.Filled.BookmarkBorder,
+    ),
+
+    PROFILE(
+        label = "Profile",
+        icon = Icons.Filled.PersonOutline,
+    ),
 }
 
 @Composable

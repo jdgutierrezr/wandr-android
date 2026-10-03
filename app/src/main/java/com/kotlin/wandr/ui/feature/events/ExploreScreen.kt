@@ -20,12 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.NotificationsNone
@@ -35,8 +31,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,13 +53,16 @@ import coil3.compose.AsyncImage
 import com.kotlin.wandr.domain.model.Event
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.ui.components.CoverImage
+import com.kotlin.wandr.ui.components.MainTab
+import com.kotlin.wandr.ui.components.WandrBottomBar
 import com.kotlin.wandr.ui.theme.WandrTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.material.icons.outlined.PersonOutline
 
 @Composable
 fun ExploreRoute(
-    onHome: () -> Unit = {},
+    onSelectTab: (MainTab) -> Unit = {},
     viewModel: ExploreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,7 +70,7 @@ fun ExploreRoute(
     ExploreScreen(
         state = state,
         onRefresh = viewModel::refresh,
-        onHome = onHome,
+        onSelectTab = onSelectTab,
     )
 }
 
@@ -81,7 +78,7 @@ fun ExploreRoute(
 fun ExploreScreen(
     state: ExploreUiState,
     onRefresh: () -> Unit,
-    onHome: () -> Unit = {},
+    onSelectTab: (MainTab) -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -252,11 +249,9 @@ fun ExploreScreen(
             }
         }
 
-        ExploreBottomNavigation(
-            selectedItem = 1,
-            onItemSelected = { index ->
-                if (index == 0) onHome()
-            },
+        WandrBottomBar(
+            selected = MainTab.EXPLORE,
+            onSelect = onSelectTab,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
@@ -532,41 +527,4 @@ private fun formatEventDate(event: Event): String {
     return event.startsAt
         .atZone(ZoneId.systemDefault())
         .format(formatter)
-}
-
-@Composable
-private fun ExploreBottomNavigation(
-    selectedItem: Int,
-    onItemSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val items = listOf(
-        Triple("Home", Icons.Outlined.Home, 0),
-        Triple("Explore", Icons.Outlined.Explore, 1),
-        Triple("Map", Icons.Outlined.Map, 2),
-        Triple("Saved", Icons.Outlined.BookmarkBorder, 3),
-        Triple("Profile", Icons.Outlined.PersonOutline, 4),
-    )
-
-    NavigationBar(
-        modifier = modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-    ) {
-        items.forEach { (label, icon, index) ->
-            NavigationBarItem(
-                selected = selectedItem == index,
-                onClick = { onItemSelected(index) },
-                icon = { Icon(icon, contentDescription = label) },
-                label = { Text(label, maxLines = 1) },
-                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = Color.Transparent,
-                ),
-            )
-        }
-    }
 }
