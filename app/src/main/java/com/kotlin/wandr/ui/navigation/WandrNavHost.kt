@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,9 +33,14 @@ import com.kotlin.wandr.ui.feature.analytics.QuestDropoffRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestsRoute
 import com.kotlin.wandr.ui.feature.quest.QuestDetailRoute
+import com.kotlin.wandr.ui.feature.session.SessionViewModel
+import com.kotlin.wandr.ui.feature.session.SplashRoute
+import com.kotlin.wandr.domain.model.SessionState
 import kotlinx.serialization.Serializable
 
 /** Every screen of the app is a route. Type-safe: arguments are properties of the class. */
+/** First screen: waits for the saved session and opens Home or Login (session gate). */
+@Serializable data object SplashDestination
 @Serializable data object LoginDestination
 @Serializable data object SignUpDestination
 @Serializable data object OnboardingDestination
@@ -53,8 +63,31 @@ import kotlinx.serialization.Serializable
  * 3. Navigate to it with `navController.navigate(ThatDestination)`.
  */
 @Composable
-fun WandrNavHost(map: WandrMap, navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = LoginDestination) {
+fun WandrNavHost(
+    map: WandrMap,
+    navController: NavHostController = rememberNavController(),
+    sessionViewModel: SessionViewModel = hiltViewModel(),
+) {
+    val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
+
+    // Session gate: if the session ends anywhere in the app (logout, expired or revoked token),
+    // go back to Login. The splash and the auth screens handle their own navigation.
+    LaunchedEffect(sessionState) {
+        if (sessionState == SessionState.SignedOut && navController.isInsideApp()) {
+            navController.leaveToLogin()
+        }
+    }
+
+    NavHost(navController = navController, startDestination = SplashDestination) {
+
+        composable<SplashDestination> {
+            SplashRoute(
+                sessionState = sessionState,
+                // Saved session restored: no password needed
+                onSignedIn = { navController.leaveSplashTo(HomeDestination) },
+                onSignedOut = { navController.leaveSplashTo(LoginDestination) },
+            )
+        }
 
         composable<LoginDestination> {
             LoginRoute(
@@ -153,6 +186,21 @@ private fun NavHostController.leaveAuthTo(destination: AfterAuthDestination) {
     navigate(target) {
         popUpTo(LoginDestination) { inclusive = true }
     }
+}
+
+/** The splash is shown only once: Back must not return to it. */
+private fun NavHostController.leaveSplashTo(destination: Any) {
+    navigate(destination) {
+        popUpTo(SplashDestination) { inclusive = true }
+    }
+}
+
+/** True on any screen that needs a session (not the splash, Login or Sign up). */
+private fun NavHostController.isInsideApp(): Boolean {
+    val current = currentBackStackEntry?.destination ?: return false
+    return !current.hasRoute<SplashDestination>() &&
+        !current.hasRoute<LoginDestination>() &&
+        !current.hasRoute<SignUpDestination>()
 }
 
 /** After signing out, Back must not return to the app: the whole back stack is removed. */
