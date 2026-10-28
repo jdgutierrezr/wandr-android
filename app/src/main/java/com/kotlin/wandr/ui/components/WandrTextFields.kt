@@ -10,8 +10,6 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -108,31 +106,6 @@ fun PasswordTextField(
     )
 }
 
-/** "Search quests, friends, places…" bar from the Discovery Map. */
-@Composable
-fun SearchField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "Search quests, friends, places…",
-    onVoiceSearch: (() -> Unit)? = null,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyMedium) },
-        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-        trailingIcon = onVoiceSearch?.let {
-            { IconButton(onClick = it) { Icon(Icons.Rounded.Mic, contentDescription = "Voice search") } }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        shape = MaterialTheme.shapes.medium,
-        colors = wandrFieldColors(),
-        modifier = modifier.fillMaxWidth(),
-    )
-}
-
 @Composable
 private fun wandrFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -150,7 +123,6 @@ private fun wandrFieldColors() = OutlinedTextFieldDefaults.colors(
 private fun TextFieldsPreview() {
     WandrTheme {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SearchField(value = "", onValueChange = {}, onVoiceSearch = {})
             WandrTextField(value = "valentina@example.com", onValueChange = {}, label = "Email", leadingIcon = Icons.Outlined.Email)
             PasswordTextField(value = "password123", onValueChange = {})
         }

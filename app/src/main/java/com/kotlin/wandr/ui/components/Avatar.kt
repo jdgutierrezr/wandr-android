@@ -2,9 +2,7 @@ package com.kotlin.wandr.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -68,40 +66,6 @@ fun Avatar(
                     .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
                     .background(OnlineGreen, CircleShape)
             )
-        }
-    }
-}
-
-/** Overlapping avatars plus "+12", as in "Mateo & 2 friends are nearby". */
-@Composable
-fun AvatarStack(
-    people: List<Pair<String, String?>>,
-    modifier: Modifier = Modifier,
-    extraCount: Int = 0,
-    size: Dp = 28.dp,
-    maxVisible: Int = 3,
-) {
-    val overlap = size * 0.3f
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(-overlap)) {
-        people.take(maxVisible).forEach { (name, url) ->
-            Avatar(
-                name = name,
-                imageUrl = url,
-                size = size,
-                modifier = Modifier.border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-            )
-        }
-        val hidden = extraCount + (people.size - maxVisible).coerceAtLeast(0)
-        if (hidden > 0) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(size)
-                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                    .background(WandrTheme.colors.locked, CircleShape),
-            ) {
-                Text("+$hidden", style = MaterialTheme.typography.labelSmall, color = WandrTheme.colors.onLocked)
-            }
         }
     }
 }

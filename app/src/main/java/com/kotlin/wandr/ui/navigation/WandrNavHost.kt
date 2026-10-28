@@ -12,7 +12,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.kotlin.wandr.BuildConfig
-import com.kotlin.wandr.ui.catalog.ComponentCatalog
 import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
@@ -52,9 +51,6 @@ data object ExploreDestination
 
 @Serializable
 data object MapDestination
-
-@Serializable
-data object CatalogDestination
 
 @Serializable
 data object ProfileDestination
@@ -221,20 +217,6 @@ fun WandrNavHost(
                 },
             )
         }
-
-        // =====================================================
-        // CATALOG
-        // =====================================================
-
-        composable<CatalogDestination> {
-
-            ComponentCatalog(
-                onBack = {
-                    navController.popBackStack()
-                },
-            )
-        }
-
 
         // =====================================================
         // PROFILE

@@ -5,15 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -63,16 +56,6 @@ fun WandrTopBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
         modifier = modifier,
     )
-}
-
-/** Bell with a dot when there are unread notifications. */
-@Composable
-fun NotificationsAction(unreadCount: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        BadgedBox(badge = { if (unreadCount > 0) Badge(containerColor = WandrTheme.colors.danger) }) {
-            Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
-        }
-    }
 }
 
 /** Tabs of the bottom bar, in the order of the mockups. */
