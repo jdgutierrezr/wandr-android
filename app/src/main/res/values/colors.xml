@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Wandr brand palette (mirrors ui/theme/Color.kt, for XML resources like the launcher icon) -->
+    <color name="ic_launcher_background">#FF8F9A78</color>
     <color name="cream">#FFFCFAF6</color>
 </resources>
