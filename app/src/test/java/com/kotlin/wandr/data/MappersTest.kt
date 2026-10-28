@@ -59,7 +59,6 @@ class MappersTest {
         )
         val event = dto.toEntity(isAttending = true).toDomain()
         assertEquals(3, event.attendees)
-        assertEquals(97, event.spotsLeft)
         assertEquals("Parque Simon Bolivar", event.placeName)
         assertEquals(Instant.parse("2026-09-28T19:00:00Z"), event.startsAt)
         assertTrue(event.isAttending)

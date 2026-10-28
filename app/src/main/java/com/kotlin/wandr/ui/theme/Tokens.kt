@@ -57,7 +57,6 @@ val DarkWandrColors = WandrColors(
 
 /** Spacing scale. Use these instead of loose numbers so every screen breathes the same way. */
 object WandrSpacing {
-    val xxs = 2.dp
     val xs = 4.dp
     val sm = 8.dp
     val md = 12.dp

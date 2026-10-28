@@ -128,9 +128,4 @@ data class Event(
     val placeName: String?,
     val attendees: Int,
     val isAttending: Boolean,
-) {
-    val isFull: Boolean get() = capacity != null && attendees >= capacity
-    val spotsLeft: Int? get() = capacity?.let { (it - attendees).coerceAtLeast(0) }
-}
-
-data class RsvpResult(val eventId: String, val attendees: Int, val capacity: Int?)
+)

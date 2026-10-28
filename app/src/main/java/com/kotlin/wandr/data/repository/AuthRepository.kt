@@ -48,12 +48,10 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signUp(name: String, email: String, password: String) = safeCall {
         val userId = remote.signUp(email.trim(), password)
         remote.createProfile(NewUserDto(id = userId, name = name.trim(), email = email.trim()))
-        eventBus.publish(AppEvent.SignedIn)
     }
 
     override suspend fun signIn(email: String, password: String) = safeCall {
         remote.signIn(email.trim(), password)
-        eventBus.publish(AppEvent.SignedIn)
     }
 
     override suspend fun signOut() = safeCall {

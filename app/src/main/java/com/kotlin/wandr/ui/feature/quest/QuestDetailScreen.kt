@@ -61,7 +61,6 @@ fun QuestDetailRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { viewModel.onScreenShown() }
     LaunchedEffect(state.startedQuestId) {
         state.startedQuestId?.let {
             onOpenTracker(it)

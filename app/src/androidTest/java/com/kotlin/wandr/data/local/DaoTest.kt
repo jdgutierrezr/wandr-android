@@ -82,10 +82,5 @@ class DaoTest {
             )
         )
         assertEquals(listOf("next"), dao.observeUpcoming(nowMillis = 5_000L).first().map { it.id })
-
-        dao.updateAttendance("next", attendees = 4, isAttending = true)
-        val updated = dao.find("next")!!
-        assertEquals(4, updated.attendees)
-        assertTrue(updated.isAttending)
     }
 }

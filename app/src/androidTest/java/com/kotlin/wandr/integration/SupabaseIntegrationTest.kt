@@ -6,7 +6,6 @@ import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.ErrorMapper
 import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.EventRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.QuestRemoteDataSource
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -20,12 +19,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 
 /**
  * Runs the main flows against the real Supabase project with the seed user Valentina.
  *
- * **This test changes data** (starts and abandons a quest, joins and leaves an event).
+ * **This test changes data** (starts and abandons a quest).
  * Afterwards, run clean_database.sql and the other SQL files again to reset the seed.
  */
 @RunWith(AndroidJUnit4::class)
@@ -79,21 +77,5 @@ class SupabaseIntegrationTest {
         // Backend rules come back as readable messages
         val error = runCatching { quests.abandonQuest(started) }.exceptionOrNull()!!
         assertEquals(AppError.Server("Quest is not in progress"), ErrorMapper.map(error))
-    }
-
-    @Test
-    fun joinAndLeaveAnEvent() = runTest {
-        val events = EventRemoteDataSource(supabase)
-        val mine = events.myEventIds()
-        val event = events.upcomingEvents(Instant.now()).first { event ->
-            event.id !in mine && (event.capacity == null || (event.attendees.firstOrNull()?.count ?: 0) < event.capacity)
-        }
-
-        val joined = events.join(event.id)
-        assertTrue(event.id in events.myEventIds())
-
-        events.leave(event.id)
-        assertTrue(event.id !in events.myEventIds())
-        assertEquals(event.id, joined.eventId)
     }
 }

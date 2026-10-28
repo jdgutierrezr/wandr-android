@@ -4,12 +4,10 @@ import com.kotlin.wandr.data.local.entity.EventEntity
 import com.kotlin.wandr.data.local.entity.PlaceEntity
 import com.kotlin.wandr.data.remote.dto.EventDto
 import com.kotlin.wandr.data.remote.dto.PlaceDto
-import com.kotlin.wandr.data.remote.dto.RsvpResultDto
 import com.kotlin.wandr.domain.model.Event
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.PlaceCategory
-import com.kotlin.wandr.domain.model.RsvpResult
 
 // ---------- Places ----------
 
@@ -65,4 +63,3 @@ fun EventEntity.toDomain() = Event(
     isAttending = isAttending,
 )
 
-fun RsvpResultDto.toDomain() = RsvpResult(eventId = eventId, attendees = attendees, capacity = capacity)

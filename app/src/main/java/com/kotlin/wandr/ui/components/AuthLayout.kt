@@ -70,7 +70,7 @@ fun AuthLayout(
 }
 
 @Composable
-fun AuthHeader(eyebrow: String, title: String, subtitle: String, modifier: Modifier = Modifier) {
+private fun AuthHeader(eyebrow: String, title: String, subtitle: String, modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm),

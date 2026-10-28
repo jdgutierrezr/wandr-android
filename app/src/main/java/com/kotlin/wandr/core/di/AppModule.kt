@@ -18,7 +18,7 @@ import java.time.Clock
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/** Scope that lives as long as the app, for work that must outlive a screen (telemetry, cache). */
+/** Scope that lives as long as the app, for work that must outlive a screen (cache invalidation, connectivity). */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope

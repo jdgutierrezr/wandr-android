@@ -3,8 +3,6 @@ package com.kotlin.wandr.ui.feature.quest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.error.appError
-import com.kotlin.wandr.core.event.AppEvent
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
@@ -74,7 +72,6 @@ data class ActiveQuestUiState(
 class ActiveQuestViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val storageRepository: StorageRepository,
-    private val eventBus: AppEventBus,
     private val analyticsRepository: AnalyticsRepository,
     private val locationProvider: LocationProvider,
 ) : ViewModel() {
@@ -186,14 +183,6 @@ class ActiveQuestViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    /**
-     * BQ8 funnel: the user tapped "Navigate". The screen opens the maps app; this only publishes
-     * NAVIGATION_STARTED for the QuestFunnelTracker (Observer).
-     */
-    fun startNavigation(questId: String) {
-        viewModelScope.launch { eventBus.publish(AppEvent.NavigationStarted(questId)) }
     }
 
     fun abandonQuest(questId: String) {

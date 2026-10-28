@@ -335,14 +335,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /*
-     * Allows reloading Mystery Quest without
-     * changing the selected filters.
-     */
-    fun refreshMysteryQuest() {
-        loadMysteryQuests()
-    }
-
     // =========================================================
     // ERROR
     // =========================================================

@@ -24,11 +24,3 @@ data class CountDto(val count: Int)
 /** `event_attendees?user_id=eq.me&select=event_id` */
 @Serializable
 data class EventIdDto(@SerialName("event_id") val eventId: String)
-
-/** JSON returned by the `rsvp_event` RPC. */
-@Serializable
-data class RsvpResultDto(
-    @SerialName("event_id") val eventId: String,
-    val attendees: Int,
-    val capacity: Int? = null,
-)

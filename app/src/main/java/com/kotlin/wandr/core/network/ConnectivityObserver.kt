@@ -5,8 +5,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import com.kotlin.wandr.core.di.ApplicationScope
-import com.kotlin.wandr.core.event.AppEvent
-import com.kotlin.wandr.core.event.AppEventBus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
@@ -14,9 +12,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,7 +25,6 @@ interface ConnectivityObserver {
 class AndroidConnectivityObserver @Inject constructor(
     @ApplicationContext context: Context,
     @ApplicationScope scope: CoroutineScope,
-    eventBus: AppEventBus,
 ) : ConnectivityObserver {
 
     private val manager = context.getSystemService(ConnectivityManager::class.java)
@@ -54,13 +48,6 @@ class AndroidConnectivityObserver @Inject constructor(
     }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, currentlyOnline())
-
-    init {
-        // Publish only real changes, not the initial value
-        status.drop(1)
-            .onEach { eventBus.publish(AppEvent.ConnectivityChanged(it)) }
-            .launchIn(scope)
-    }
 
     private fun currentlyOnline(): Boolean {
         val caps = manager.getNetworkCapabilities(manager.activeNetwork) ?: return false

@@ -29,9 +29,6 @@ interface ProfileRepository {
     fun observeBadges(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<EarnedBadge>>>
     fun observeQuestHistory(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<QuestHistoryItem>>>
 
-    /** Downloads the profile into the cache and returns it. */
-    suspend fun refreshProfile(): Result<UserProfile>
-
 
     /** Downloads the profile, badges and history again (after finishing a quest, for example). */
     suspend fun refreshAll(): Result<Unit>
@@ -71,8 +68,6 @@ class ProfileRepositoryImpl @Inject constructor(
         local = questDao.observeHistory().map { rows -> rows.map { it.toHistoryItem() } },
         refresh = ::refreshHistory,
     )
-
-    override suspend fun refreshProfile() = safeCall { downloadProfile().toDomain() }
 
     override suspend fun refreshAll() = safeCall {
         downloadProfile()

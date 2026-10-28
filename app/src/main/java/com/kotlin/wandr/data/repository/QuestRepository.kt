@@ -132,15 +132,11 @@ class QuestRepositoryImpl @Inject constructor(
     override suspend fun startQuest(questId: String) = safeCall {
         remote.startQuest(questId)
         refreshActive()
-        eventBus.publish(AppEvent.QuestStarted(questId))
     }
 
     override suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String?) = safeCall {
         val result = remote.completeObjective(questId, objectiveId, photoPath).toDomain()
         refreshActive()
-        eventBus.publish(
-            AppEvent.ObjectiveCompleted(questId, objectiveId, result.completedObjectives, result.totalObjectives)
-        )
         if (result.questCompleted) {
             eventBus.publish(
                 AppEvent.QuestCompleted(
@@ -152,7 +148,6 @@ class QuestRepositoryImpl @Inject constructor(
                     newBadges = result.newBadges,
                 )
             )
-            result.newBadges.forEach { eventBus.publish(AppEvent.BadgeUnlocked(it)) }
         }
         result
     }
@@ -160,7 +155,6 @@ class QuestRepositoryImpl @Inject constructor(
     override suspend fun abandonQuest(questId: String) = safeCall {
         remote.abandonQuest(questId)
         refreshActive()
-        eventBus.publish(AppEvent.QuestAbandoned(questId))
     }
 
     private suspend fun refreshDetail(questId: String) {

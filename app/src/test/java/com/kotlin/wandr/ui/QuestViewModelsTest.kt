@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.AppException
-import com.kotlin.wandr.core.event.AppEvent
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
@@ -30,11 +28,9 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,7 +49,6 @@ class QuestViewModelsTest {
             QuestDropoffReport(listOf(DropoffPoint("q1", "Quest q1", 2, 1, "Step 1", 1)))
         )
     }
-    private val bus = AppEventBus()
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
 
@@ -106,7 +101,7 @@ class QuestViewModelsTest {
         every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
         coEvery { questRepository.startQuest("q1") } returns Result.success(Unit)
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
         assertEquals(detail, viewModel.uiState.value.detail)
         assertFalse(viewModel.uiState.value.isInProgress)
 
@@ -122,43 +117,20 @@ class QuestViewModelsTest {
         coEvery { questRepository.startQuest("q1") } returns
             Result.failure(AppException(AppError.Server("You already completed this quest")))
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
         assertTrue(viewModel.uiState.value.isInProgress)
         viewModel.startQuest()
         assertEquals("You already completed this quest", viewModel.uiState.value.errorMessage)
     }
 
-    @Test
-    fun `quest detail reports QUEST_VIEWED once per visit (BQ8)`() = runTest {
-        every { questRepository.questDetail("q1", any()) } returns flowOf(Resource.Loading)
-        every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
-
-        bus.subscribe<AppEvent.QuestViewed>().test {
-            viewModel.onScreenShown()
-            viewModel.onScreenShown() // e.g. after a rotation
-            assertEquals(AppEvent.QuestViewed("q1"), awaitItem())
-            expectNoEvents()
-        }
-    }
-
     // ---------- Active quest ----------
-
-    @Test
-    fun `navigate reports NAVIGATION_STARTED (BQ8)`() = runTest {
-        val viewModel = tracker()
-        bus.subscribe<AppEvent.NavigationStarted>().test {
-            viewModel.startNavigation("q1")
-            assertEquals(AppEvent.NavigationStarted("q1"), awaitItem())
-        }
-    }
 
     private val photoStep = objective("o2", "q1", 2, requiresPhoto = true)
     private val active = activeQuest("q1", listOf(objective("o1", "q1", 1), photoStep), done = setOf("o1"))
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository, trackerLocation)
+        return ActiveQuestViewModel(questRepository, storageRepository, analyticsRepository, trackerLocation)
     }
 
     @Test

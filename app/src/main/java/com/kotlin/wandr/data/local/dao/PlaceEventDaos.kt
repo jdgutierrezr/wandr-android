@@ -53,12 +53,6 @@ interface EventDao {
         upsert(events)
     }
 
-    @Query("UPDATE events SET attendees = :attendees, isAttending = :isAttending WHERE id = :eventId")
-    suspend fun updateAttendance(eventId: String, attendees: Int, isAttending: Boolean)
-
-    @Query("SELECT * FROM events WHERE id = :eventId")
-    suspend fun find(eventId: String): EventEntity?
-
     @Upsert
     suspend fun upsert(events: List<EventEntity>)
 

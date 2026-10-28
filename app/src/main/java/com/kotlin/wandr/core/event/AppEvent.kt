@@ -6,28 +6,7 @@ import com.kotlin.wandr.domain.model.Tier
 /** Something that happened in the app. Published on the [AppEventBus]. */
 sealed interface AppEvent {
 
-    data class ConnectivityChanged(val isOnline: Boolean) : AppEvent
-
-    data object SignedIn : AppEvent
     data object SignedOut : AppEvent
-
-    /** The user opened a quest's details (BQ8 funnel: QUEST_VIEWED). */
-    data class QuestViewed(val questId: String) : AppEvent
-
-    /** The user accepted a quest (BQ8 funnel: QUEST_ACCEPTED). */
-    data class QuestStarted(val questId: String) : AppEvent
-
-    /** The user opened the directions to the quest's place (BQ8 funnel: NAVIGATION_STARTED). */
-    data class NavigationStarted(val questId: String) : AppEvent
-
-    data class QuestAbandoned(val questId: String) : AppEvent
-
-    data class ObjectiveCompleted(
-        val questId: String,
-        val objectiveId: String,
-        val completedObjectives: Int,
-        val totalObjectives: Int,
-    ) : AppEvent
 
     data class QuestCompleted(
         val questId: String,
@@ -37,9 +16,4 @@ sealed interface AppEvent {
         val currentStreak: Int,
         val newBadges: List<Badge>,
     ) : AppEvent
-
-    data class BadgeUnlocked(val badge: Badge) : AppEvent
-
-    data class EventJoined(val eventId: String) : AppEvent
-    data class EventLeft(val eventId: String) : AppEvent
 }
