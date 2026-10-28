@@ -29,7 +29,6 @@ interface ProfileRepository {
     fun observeBadges(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<EarnedBadge>>>
     fun observeQuestHistory(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<QuestHistoryItem>>>
 
-
     /** Downloads the profile, badges and history again (after finishing a quest, for example). */
     suspend fun refreshAll(): Result<Unit>
 
