@@ -9,12 +9,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
-/**
- * Strategy pattern: how a repository combines the local cache (Room) and the network (Supabase).
- *
- * Room is the single source of truth: every strategy ends up observing [local]. They only differ
- * in when they call [refresh], which downloads fresh data and saves it into Room.
- */
 interface FetchStrategy {
     fun <T> fetch(
         local: Flow<T>,
@@ -23,7 +17,6 @@ interface FetchStrategy {
     ): Flow<Resource<T>>
 }
 
-/** Always tries the network first. If it fails, falls back to the cache and marks it stale. */
 object NetworkFirst : FetchStrategy {
     override fun <T> fetch(local: Flow<T>, refresh: suspend () -> Unit, isEmpty: (T) -> Boolean): Flow<Resource<T>> = flow {
         emit(Resource.Loading)
@@ -41,7 +34,6 @@ object NetworkFirst : FetchStrategy {
     }
 }
 
-/** Uses the cache when it has data; only goes to the network when the cache is empty. */
 object CacheFirst : FetchStrategy {
     override fun <T> fetch(local: Flow<T>, refresh: suspend () -> Unit, isEmpty: (T) -> Boolean): Flow<Resource<T>> = flow {
         if (isEmpty(local.first())) {
@@ -56,7 +48,6 @@ object CacheFirst : FetchStrategy {
     }
 }
 
-/** Never touches the network. Used while the device is offline. */
 object CacheOnly : FetchStrategy {
     override fun <T> fetch(local: Flow<T>, refresh: suspend () -> Unit, isEmpty: (T) -> Boolean): Flow<Resource<T>> = flow {
         val cached = local.first()

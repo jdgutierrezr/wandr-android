@@ -22,11 +22,9 @@ data class QuestDetailUiState(
     val isLoading: Boolean = true,
     val detail: QuestDetail? = null,
     val isShowingSavedData: Boolean = false,
-    /** The user already has this quest in progress: show "Continue" instead of "Start". */
     val isInProgress: Boolean = false,
     val isStarting: Boolean = false,
     val errorMessage: String? = null,
-    /** Set when the quest was started; the screen opens the tracker. */
     val startedQuestId: String? = null,
 )
 
@@ -58,7 +56,6 @@ class QuestDetailViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        // Only the cache: the tracker is the one that downloads active quests
         questRepository.activeQuests(FetchPolicy.CACHE_FIRST)
             .onEach { resource ->
                 if (resource is Resource.Success) {
@@ -83,7 +80,6 @@ class QuestDetailViewModel @Inject constructor(
     fun onErrorShown() = _uiState.update { it.copy(errorMessage = null) }
 
     companion object {
-        /** Navigation argument with the quest id. */
         const val QUEST_ID_ARG = "questId"
     }
 }

@@ -15,8 +15,6 @@ import com.kotlin.wandr.domain.model.QuestStatus
 import com.kotlin.wandr.domain.model.Tier
 import com.kotlin.wandr.domain.model.UserProfile
 
-// ---------- Profile ----------
-
 fun UserDto.toEntity() = ProfileEntity(
     id = id,
     name = name,
@@ -41,8 +39,6 @@ fun ProfileEntity.toDomain() = UserProfile(
     energyLevel = EnergyLevel.fromApi(energyLevel),
 )
 
-// ---------- Badges ----------
-
 fun BadgeDto.toDomain() = Badge(id = id, name = name, description = description, iconUrl = iconUrl)
 
 fun UserBadgeDto.toEntity() = UserBadgeEntity(
@@ -57,8 +53,6 @@ fun UserBadgeEntity.toDomain() = EarnedBadge(
     badge = Badge(id = badgeId, name = name, description = description, iconUrl = iconUrl),
     earnedAt = earnedAtMillis.toInstant(),
 )
-
-// ---------- Quest history ----------
 
 fun QuestHistoryDto.toEntity() = CompletionEntity(
     id = id,

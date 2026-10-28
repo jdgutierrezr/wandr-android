@@ -97,7 +97,6 @@ fun SignUpScreen(
                 onImeAction = submit,
                 enabled = !state.isLoading,
             )
-            // Validation (valid email, 6+ characters) lives in the ViewModel and comes back as errorMessage
             PrimaryButton(
                 text = "Sign up",
                 onClick = submit,

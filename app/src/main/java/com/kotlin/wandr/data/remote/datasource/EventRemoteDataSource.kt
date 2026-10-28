@@ -10,7 +10,6 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Facade over `events` and `event_attendees`. */
 @Singleton
 class EventRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
@@ -23,7 +22,6 @@ class EventRemoteDataSource @Inject constructor(
             }
             .decodeList()
 
-    /** Ids of the events the user is going to. */
     suspend fun myEventIds(): Set<String> =
         supabase.from("event_attendees")
             .select(Columns.list("event_id")) { filter { eq("user_id", supabase.requireUserId()) } }

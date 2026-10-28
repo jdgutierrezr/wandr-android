@@ -3,7 +3,6 @@ package com.kotlin.wandr.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** The logged-in user's profile. Only one row. */
 @Entity(tableName = "profile")
 data class ProfileEntity(
     @PrimaryKey val id: String,
@@ -17,7 +16,6 @@ data class ProfileEntity(
     val energyLevel: String?,
 )
 
-/** Badges the logged-in user has earned. */
 @Entity(tableName = "user_badges")
 data class UserBadgeEntity(
     @PrimaryKey val badgeId: String,

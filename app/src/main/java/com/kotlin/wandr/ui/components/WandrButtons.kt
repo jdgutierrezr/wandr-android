@@ -30,7 +30,6 @@ import com.kotlin.wandr.ui.theme.WandrTheme
 
 private val ButtonHeight = 52.dp
 
-/** Icon + text, and the icon can go before or after the text ("Continue →"). */
 @Composable
 private fun ButtonContent(text: String, leadingIcon: ImageVector?, trailingIcon: ImageVector?) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm)) {
@@ -40,7 +39,6 @@ private fun ButtonContent(text: String, leadingIcon: ImageVector?, trailingIcon:
     }
 }
 
-/** Main action of a screen ("Accept Quest"). While [isLoading] it shows a spinner and cannot be pressed twice. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -55,7 +53,6 @@ fun PrimaryButton(
         onClick = onClick,
         enabled = enabled && !isLoading,
         shape = MaterialTheme.shapes.medium,
-        // While loading the button is disabled, but it keeps its green so the spinner is visible
         colors = if (isLoading) {
             ButtonDefaults.buttonColors(
                 disabledContainerColor = MaterialTheme.colorScheme.primary,
@@ -78,7 +75,6 @@ fun PrimaryButton(
     }
 }
 
-/** Second option under the main one ("Give me another one"): white with a border. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -103,7 +99,6 @@ fun SecondaryButton(
     }
 }
 
-/** Destructive or urgent action ("Need Help / SOS"). */
 @Composable
 fun DangerButton(
     text: String,
@@ -124,7 +119,6 @@ fun DangerButton(
     }
 }
 
-/** Link-like action, e.g. "Don't have an account? Sign up" or "Skip for now". */
 @Composable
 fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     TextButton(onClick = onClick, enabled = enabled, modifier = modifier) {

@@ -8,7 +8,6 @@ import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Facade over `places` and the `nearby_places` RPC. */
 @Singleton
 class PlaceRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,

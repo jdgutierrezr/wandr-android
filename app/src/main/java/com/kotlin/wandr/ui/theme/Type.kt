@@ -23,13 +23,6 @@ private fun style(size: Int, lineHeight: Int, weight: FontWeight, letterSpacing:
     letterSpacing = letterSpacing.sp,
 )
 
-/**
- * Type scale taken from the mockups:
- * - display / headline: screen and quest titles ("Quest Complete!", "Try a new coffee shop")
- * - title: card titles and top bars
- * - body: descriptions
- * - label: buttons, chips, badges, and the small uppercase section labels ("OBJECTIVES")
- */
 val Typography = Typography(
     displayLarge = style(48, 56, FontWeight.Bold),
     displayMedium = style(40, 48, FontWeight.Bold),

@@ -21,19 +21,15 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Where the user is, and how sure we are about it. */
 data class UserLocation(
     val point: GeoPoint,
     val source: Source,
 ) {
     enum class Source {
-        /** Fresh GPS / network fix. */
         CURRENT,
 
-        /** The last fix the device remembers (QS11: GPS lost). */
         LAST_KNOWN,
 
-        /** No permission or no fix at all: center of Bogota. */
         FALLBACK,
     }
 }
@@ -42,7 +38,6 @@ interface LocationProvider {
     fun hasPermission(): Boolean
     suspend fun currentLocation(): UserLocation
 
-    /** Updates only after moving [minDistanceMeters] (QS5: save battery). */
     fun locationUpdates(minDistanceMeters: Float = 50f, intervalMs: Long = 30_000): Flow<UserLocation>
 
     companion object {

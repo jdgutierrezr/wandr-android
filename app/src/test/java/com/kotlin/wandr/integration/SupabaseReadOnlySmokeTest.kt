@@ -25,19 +25,12 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.time.Instant
 
-/**
- * Decodes real Supabase responses with our DTOs and mappers. **Read only**: it never changes data.
- *
- * Skipped by default. Run it with:
- *   WANDR_SUPABASE_SMOKE=1 ./gradlew testDebugUnitTest --tests "*SupabaseReadOnlySmokeTest*"
- */
 class SupabaseReadOnlySmokeTest {
 
     @Test
     fun readEndpointsDecodeWithTestUser() = runBlocking {
         assumeTrue("Set WANDR_SUPABASE_SMOKE=1 to run", System.getenv("WANDR_SUPABASE_SMOKE") == "1")
 
-        // Plain JVM: keep the session in memory instead of Android storage
         val supabase = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY) {
             defaultSerializer = KotlinXSerializer(Json { ignoreUnknownKeys = true })
             install(Auth) {

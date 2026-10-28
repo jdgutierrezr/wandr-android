@@ -42,8 +42,6 @@ class MapProfileViewModelsTest {
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.CURRENT)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
 
-    // ---------- Map ----------
-
     private val museum = Place("place-q1", "Museo del Oro", PlaceCategory.MUSEUM, null, GeoPoint(4.6, -74.07), 4.8, null, 1.2)
 
     private fun mapViewModel(quests: QuestRepository, places: List<Place> = listOf(museum)): MapViewModel {
@@ -69,7 +67,6 @@ class MapProfileViewModelsTest {
     @Test
     fun `map pins each quest on its place`() {
         val repository = mockk<QuestRepository>()
-        // q2 belongs to "place-q2", which the places list does not have
         val quests = listOf(quest("q1"), quest("q2"))
         every { repository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Success(quests))
 
@@ -79,8 +76,6 @@ class MapProfileViewModelsTest {
         assertEquals(listOf(MapMarker("q1", museum.location, "Quest q1", "Museo del Oro")), state.markers)
         assertFalse(state.isLoading)
     }
-
-    // ---------- Profile ----------
 
     @Test
     fun `profile celebrates a quest completed anywhere in the app`() = runTest {

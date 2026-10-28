@@ -20,11 +20,6 @@ import coil3.compose.AsyncImage
 import com.kotlin.wandr.ui.theme.OnlineGreen
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Round profile photo. Shows the person's initials underneath, so there is always something
- * visible while the photo loads, if it fails, or if the user has no photo.
- * [isOnline] draws the small green dot of "Friends on Quest".
- */
 @Composable
 fun Avatar(
     name: String,

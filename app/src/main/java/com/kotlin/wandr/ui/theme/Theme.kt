@@ -25,7 +25,6 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = ForestGreen,
     background = Cream,
     onBackground = Ink,
-    // Cards are white on the cream background, like in the mockups
     surface = White,
     onSurface = Ink,
     surfaceVariant = Stone,
@@ -62,8 +61,6 @@ private val DarkColorScheme = darkColorScheme(
 @Composable
 fun WandrTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color (Android 12+) replaces the brand palette with wallpaper colors,
-    // so it is off by default to keep Wandr's identity consistent.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -87,7 +84,6 @@ fun WandrTheme(
     }
 }
 
-/** Wandr tokens, next to `MaterialTheme.colorScheme` / `.typography`. */
 object WandrTheme {
     val colors: WandrColors
         @Composable @ReadOnlyComposable get() = LocalWandrColors.current

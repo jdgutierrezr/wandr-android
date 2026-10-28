@@ -64,7 +64,6 @@ class SignUpViewModel @Inject constructor(
     }
 
     private companion object {
-        /** Supabase Auth's default minimum. */
         const val MIN_PASSWORD_LENGTH = 6
         val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }

@@ -32,8 +32,6 @@ class EventBusAndCacheInvalidatorTest {
         }
     }
 
-    // ---------- CacheInvalidator ----------
-
     @Test
     fun `completing a quest refreshes the profile, and signing out clears the cache`() =
         runTest(UnconfinedTestDispatcher()) {
@@ -46,7 +44,6 @@ class EventBusAndCacheInvalidatorTest {
             coVerify(exactly = 1) { profileRepository.refreshAll() }
 
             bus.publish(AppEvent.SignedOut)
-            // clearAllTables runs on Dispatchers.IO, outside the test scheduler
             verify(timeout = 2_000, exactly = 1) { database.clearAllTables() }
         }
 }

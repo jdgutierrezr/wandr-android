@@ -26,8 +26,6 @@ class AuthViewModelsTest {
         onPasswordChange("password123")
     }
 
-    // ---------- Login ----------
-
     @Test
     fun `login goes home`() {
         coEvery { authRepository.signIn(any(), any()) } returns Result.success(Unit)
@@ -57,8 +55,6 @@ class AuthViewModelsTest {
         viewModel.submit()
         coVerify(exactly = 0) { authRepository.signIn(any(), any()) }
     }
-
-    // ---------- Sign up ----------
 
     @Test
     fun `sign up validates before calling the backend`() {

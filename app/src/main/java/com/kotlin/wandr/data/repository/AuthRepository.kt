@@ -17,7 +17,6 @@ interface AuthRepository {
     val sessionState: Flow<SessionState>
     fun currentUserId(): String?
 
-    /** Creates the account and the profile row with the same id. */
     suspend fun signUp(name: String, email: String, password: String): Result<Unit>
     suspend fun signIn(email: String, password: String): Result<Unit>
     suspend fun signOut(): Result<Unit>

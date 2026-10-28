@@ -21,8 +21,6 @@ import com.kotlin.wandr.domain.model.QuestObjective
 import com.kotlin.wandr.domain.model.RecommendedQuest
 import com.kotlin.wandr.domain.model.Tier
 
-// ---------- Quests ----------
-
 fun NearbyQuestDto.toEntity() = QuestEntity(
     id = id,
     placeId = placeId,
@@ -38,7 +36,6 @@ fun NearbyQuestDto.toEntity() = QuestEntity(
 
 fun QuestTagDto.toEntity() = QuestTagEntity(questId = questId, tagName = tags.name)
 
-/** [distanceKm] is kept from the cache: the detail endpoint does not know where the user is. */
 fun QuestDetailDto.toEntity(distanceKm: Double?) = QuestEntity(
     id = id,
     placeId = placeId,
@@ -87,7 +84,6 @@ fun RecommendedQuestDto.toRecommendedQuest() = RecommendedQuest(
     matchedInterests = emptyList(),
     energyMatch = energy_match,
 )
-// ---------- Objectives ----------
 
 fun ObjectiveDto.toEntity() = ObjectiveEntity(
     id = id,
@@ -105,9 +101,6 @@ fun ObjectiveEntity.toDomain() = QuestObjective(
     orderIndex = orderIndex,
 )
 
-// ---------- Active quests ----------
-
-/** One remote row becomes three kinds of local rows. */
 data class ActiveQuestRows(
     val completion: CompletionEntity,
     val objectives: List<ObjectiveEntity>,

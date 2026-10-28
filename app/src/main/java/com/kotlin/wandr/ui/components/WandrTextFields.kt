@@ -31,10 +31,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Text field with the Wandr look: white, rounded, thin border that turns green on focus.
- * Stateless: the value lives in the ViewModel and every keystroke goes back through [onValueChange].
- */
 @Composable
 fun WandrTextField(
     value: String,
@@ -70,7 +66,6 @@ fun WandrTextField(
     )
 }
 
-/** Password field with an eye button. Whether it is visible is UI-only state, so it lives here. */
 @Composable
 fun PasswordTextField(
     value: String,

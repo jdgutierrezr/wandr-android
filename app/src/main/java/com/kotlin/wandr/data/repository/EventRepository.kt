@@ -15,7 +15,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface EventRepository {
-    /** Upcoming events with how many people are going and whether the user is one of them. */
     fun upcomingEvents(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<Event>>>
 }
 

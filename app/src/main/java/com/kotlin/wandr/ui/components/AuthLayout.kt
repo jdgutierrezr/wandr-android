@@ -26,11 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Shared frame of the Login and Sign up screens, in the style of the onboarding mockup:
- * soft green gradient, header, the form inside a white card ([form]) and actions below ([footer]).
- * Scrolls and moves up with the keyboard (imePadding), so small phones can reach the button.
- */
 @Composable
 fun AuthLayout(
     eyebrow: String,
@@ -76,8 +71,6 @@ private fun AuthHeader(eyebrow: String, title: String, subtitle: String, modifie
         verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm),
         modifier = modifier,
     ) {
-        // TODO: when the bear is in res/drawable, replace the compass with:
-        // Image(painterResource(R.drawable.wandr_bear), contentDescription = null, Modifier.size(96.dp))
         Box(contentAlignment = Alignment.Center) {
             IconCircle(Icons.Rounded.Explore, size = 88.dp, containerColor = MaterialTheme.colorScheme.surface)
         }

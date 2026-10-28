@@ -13,7 +13,6 @@ data class PlaceEntity(
     val longitude: Double,
     val averageRating: Double,
     val coverImageUrl: String?,
-    /** Distance from the last location used in `nearby_places`. Null = not in the last nearby result. */
     val distanceKm: Double?,
 )
 

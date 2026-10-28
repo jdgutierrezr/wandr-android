@@ -16,7 +16,6 @@ import com.kotlin.wandr.data.local.entity.QuestEntity
 import com.kotlin.wandr.data.local.entity.QuestTagEntity
 import com.kotlin.wandr.data.local.entity.UserBadgeEntity
 
-/** Local cache. Room is the single source of truth for everything the app reads offline. */
 @Database(
     entities = [
         ProfileEntity::class,

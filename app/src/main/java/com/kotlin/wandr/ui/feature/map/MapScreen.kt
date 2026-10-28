@@ -54,7 +54,6 @@ private val LOCATION_PERMISSIONS = arrayOf(
     Manifest.permission.ACCESS_COARSE_LOCATION,
 )
 
-/** Stateful part: asks for the location permission and connects the ViewModel to [MapScreen]. */
 @Composable
 fun MapRoute(
     map: WandrMap,
@@ -65,7 +64,6 @@ fun MapRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    // Once the user allows it, load again from their real position
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { granted ->
@@ -93,7 +91,6 @@ fun MapRoute(
     )
 }
 
-/** Stateless part: radius chips, the map and the list of nearby quests. */
 @Composable
 fun MapScreen(
     state: MapUiState,
@@ -131,7 +128,6 @@ fun MapScreen(
                         radiusKm = state.radiusKm,
                         markers = state.markers,
                         showUserLocation = location.source != UserLocation.Source.FALLBACK,
-                        // A pin has the id of its quest: bring that quest into view
                         onMarkerClick = { marker ->
                             val index = state.quests.indexOfFirst { it.id == marker.id }
                             if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
@@ -177,7 +173,6 @@ fun MapScreen(
     }
 }
 
-/** Full-width line under the map: offline, or the location is not exact. */
 @Composable
 private fun Notice(text: String) {
     Text(
@@ -191,10 +186,8 @@ private fun Notice(text: String) {
     )
 }
 
-/** 0.42 → "0.4 km". */
 private fun formatDistance(km: Double): String = String.format(Locale.US, "%.1f km", km)
 
-/** Google Maps does not render in previews. A stand-in is enough because the screen only knows [WandrMap]. */
 private object PreviewMap : WandrMap {
     @Composable
     override fun Content(

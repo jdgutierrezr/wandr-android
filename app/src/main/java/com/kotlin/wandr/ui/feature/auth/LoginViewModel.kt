@@ -17,7 +17,6 @@ data class LoginUiState(
     val password: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    /** Set once logged in; the screen navigates and never resets it. */
     val isLoggedIn: Boolean = false,
 ) {
     val canSubmit: Boolean get() = email.isNotBlank() && password.isNotBlank() && !isLoading

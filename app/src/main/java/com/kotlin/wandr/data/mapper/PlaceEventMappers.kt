@@ -9,9 +9,6 @@ import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.PlaceCategory
 
-// ---------- Places ----------
-
-/** [distanceKm] overrides the DTO's one (the plain `places` table has no distance). */
 fun PlaceDto.toEntity(distanceKm: Double? = this.distanceKm) = PlaceEntity(
     id = id,
     name = name,
@@ -34,8 +31,6 @@ fun PlaceEntity.toDomain() = Place(
     coverImageUrl = coverImageUrl,
     distanceKm = distanceKm,
 )
-
-// ---------- Events ----------
 
 fun EventDto.toEntity(isAttending: Boolean) = EventEntity(
     id = id,

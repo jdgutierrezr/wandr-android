@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlaceDao {
 
-    /** [category] null = every category. */
     @Query(
         """
         SELECT * FROM places

@@ -3,7 +3,6 @@ package com.kotlin.wandr.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Row returned by the `nearby_quests` RPC. */
 @Serializable
 data class NearbyQuestDto(
     val id: String,
@@ -18,7 +17,6 @@ data class NearbyQuestDto(
     @SerialName("distance_km") val distanceKm: Double? = null,
 )
 
-/** `quest_tags?select=quest_id,tags(name)` */
 @Serializable
 data class QuestTagDto(
     @SerialName("quest_id") val questId: String,
@@ -28,7 +26,6 @@ data class QuestTagDto(
 @Serializable
 data class TagNameDto(val name: String)
 
-/** `quests?id=eq.<id>&select=*,places(*),quest_objectives(*),quest_tags(tags(name))` */
 @Serializable
 data class QuestDetailDto(
     val id: String,
@@ -56,7 +53,6 @@ data class ObjectiveDto(
     @SerialName("order_index") val orderIndex: Int,
 )
 
-/** Row of `quest_completions`, returned by `start_quest` and `abandon_quest`. */
 @Serializable
 data class CompletionDto(
     val id: String,
@@ -66,10 +62,6 @@ data class CompletionDto(
     @SerialName("created_at") val createdAt: String,
 )
 
-/**
- * `quest_completions?status=eq.pending&select=id,quest_id,status,created_at,
- *  quests(title,quest_objectives(*)),quest_objective_completions(objective_id)`
- */
 @Serializable
 data class ActiveCompletionDto(
     val id: String,
@@ -91,7 +83,6 @@ data class ObjectiveCompletionDto(
     @SerialName("objective_id") val objectiveId: String,
 )
 
-/** JSON returned by the `complete_objective` RPC. */
 @Serializable
 data class ObjectiveResultDto(
     @SerialName("completed_objectives") val completedObjectives: Int,

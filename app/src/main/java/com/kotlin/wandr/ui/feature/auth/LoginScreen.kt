@@ -21,10 +21,6 @@ import com.kotlin.wandr.ui.components.PrimaryButton
 import com.kotlin.wandr.ui.components.WandrTextField
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Route = the stateful part. It gets the ViewModel from Hilt, observes its state and reacts
- * to one-time things (navigate, show an error). The navigation graph only knows this function.
- */
 @Composable
 fun LoginRoute(
     onLoggedIn: () -> Unit,
@@ -34,7 +30,6 @@ fun LoginRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Runs again only when `isLoggedIn` changes
     LaunchedEffect(state.isLoggedIn) {
         if (state.isLoggedIn) onLoggedIn()
     }
@@ -55,10 +50,6 @@ fun LoginRoute(
     )
 }
 
-/**
- * Screen = the stateless part. It only draws [state] and reports events through lambdas.
- * No ViewModel here, so it can be previewed and tested with any state.
- */
 @Composable
 fun LoginScreen(
     state: LoginUiState,

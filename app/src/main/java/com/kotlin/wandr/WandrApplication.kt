@@ -12,7 +12,6 @@ class WandrApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Event bus subscribers that live as long as the app
         cacheInvalidator.start()
     }
 }

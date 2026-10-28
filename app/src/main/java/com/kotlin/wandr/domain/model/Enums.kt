@@ -1,10 +1,5 @@
 package com.kotlin.wandr.domain.model
 
-/**
- * Postgres enums. [apiValue] is the exact text Supabase sends and expects.
- * Unknown values fall back to a safe default, so a new backend value never crashes the app.
- */
-
 enum class Tier(val apiValue: String, val displayName: String) {
     BOGOTA_SCOUT("bogota_scout", "Bogota Scout"),
     TRAILBLAZER("trailblazer", "Trailblazer"),

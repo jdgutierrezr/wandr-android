@@ -16,7 +16,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface PlaceRepository {
-    /** Places around [location], closest first (Map). [category] null = all. */
     fun nearbyPlaces(
         location: GeoPoint,
         radiusKm: Double = QuestRepository.DEFAULT_RADIUS_KM,

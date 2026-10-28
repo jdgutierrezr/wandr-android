@@ -8,10 +8,6 @@ import kotlinx.coroutines.flow.filterIsInstance
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Event-based style: publishers (repositories, ViewModels) and subscribers
- * (cache invalidation, ViewModels) only know the bus, never each other.
- */
 @Singleton
 class AppEventBus @Inject constructor() {
 

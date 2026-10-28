@@ -50,10 +50,8 @@ data class ActiveQuestUiState(
     val isLoading: Boolean = true,
     val quests: List<ActiveQuest> = emptyList(),
     val isShowingSavedData: Boolean = false,
-    /** Step being sent (show a spinner on it). */
     val submittingObjectiveId: String? = null,
     val abandoningQuestId: String? = null,
-    /** Last checked step: "2 of 3", or the XP / level / badges when the quest was completed. */
     val lastResult: ObjectiveResult? = null,
     val errorMessage: String? = null,
     /** Smart feature: BQ8 drop-off data, used to warn on the riskiest step. Null = no hint. */
@@ -66,7 +64,6 @@ data class ActiveQuestUiState(
     fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
 }
 
-/** Active Quest Tracker. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ActiveQuestViewModel @Inject constructor(
@@ -155,10 +152,6 @@ class ActiveQuestViewModel @Inject constructor(
         UserLocation.Source.CURRENT -> LiveDistance(point.distanceMetersTo(destination))
     }
 
-    /**
-     * Checks a step. If it needs a photo, pass the JPEG taken with the camera in [photoJpeg]:
-     * it is uploaded to Storage first and its path is sent to `complete_objective`.
-     */
     fun completeObjective(questId: String, objectiveId: String, photoJpeg: ByteArray? = null) {
         if (_uiState.value.submittingObjectiveId != null) return
         val objective = _uiState.value.quests

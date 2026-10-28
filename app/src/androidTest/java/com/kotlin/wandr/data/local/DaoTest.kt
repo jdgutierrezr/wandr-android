@@ -47,7 +47,6 @@ class DaoTest {
         assertEquals(listOf("near", "far"), first.map { it.quest.id })
         assertEquals(setOf("food", "music"), first.first().tags.map { it.tagName }.toSet())
 
-        // A new location: "far" is no longer nearby
         dao.replaceNearby(listOf(quest("new", 1.0)), emptyList())
         assertEquals(listOf("new"), dao.observeNearby(5.0).first().map { it.quest.id })
     }
@@ -67,7 +66,6 @@ class DaoTest {
         assertEquals(2, active.objectives.size)
         assertEquals(listOf("o1"), active.completedObjectives.map { it.objectiveId })
 
-        // Finished elsewhere: the next refresh has no pending quests
         dao.replaceActive(emptyList(), emptyList(), emptyList())
         assertTrue(dao.observeActive().first().isEmpty())
     }

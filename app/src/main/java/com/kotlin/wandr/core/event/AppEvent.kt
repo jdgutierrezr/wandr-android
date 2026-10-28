@@ -3,7 +3,6 @@ package com.kotlin.wandr.core.event
 import com.kotlin.wandr.domain.model.Badge
 import com.kotlin.wandr.domain.model.Tier
 
-/** Something that happened in the app. Published on the [AppEventBus]. */
 sealed interface AppEvent {
 
     data object SignedOut : AppEvent

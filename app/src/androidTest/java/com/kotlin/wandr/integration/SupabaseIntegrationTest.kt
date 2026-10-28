@@ -20,12 +20,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Runs the main flows against the real Supabase project with the seed user Valentina.
- *
- * **This test changes data** (starts and abandons a quest).
- * Afterwards, run clean_database.sql and the other SQL files again to reset the seed.
- */
 @RunWith(AndroidJUnit4::class)
 class SupabaseIntegrationTest {
 
@@ -47,14 +41,12 @@ class SupabaseIntegrationTest {
         val nearby = quests.nearbyQuests(4.6097, -74.0817, 20.0)
         assertTrue("seed has quests in Bogota", nearby.isNotEmpty())
 
-        // Valentina already finished some quests; use the first one she can start
         val started = nearby.firstNotNullOfOrNull { quest ->
             runCatching { quests.startQuest(quest.id) }.getOrNull()?.let { quest.id }
         } ?: error("No quest could be started")
 
         val steps = quests.questDetail(started).questObjectives.sortedBy { it.orderIndex }
         val firstStep = steps.first()
-        // Checking the only step would complete the quest (and give XP); skip it then
         if (steps.size > 1 && !firstStep.requiresPhoto) {
             val result = quests.completeObjective(started, firstStep.id, photoPath = null)
             assertTrue(result.completedObjectives >= 1)
@@ -74,7 +66,6 @@ class SupabaseIntegrationTest {
         val expectedLastStep = if (steps.size > 1 && !firstStep.requiresPhoto) firstStep.orderIndex else 0
         assertTrue(rows.any { it.lastStep == expectedLastStep })
 
-        // Backend rules come back as readable messages
         val error = runCatching { quests.abandonQuest(started) }.exceptionOrNull()!!
         assertEquals(AppError.Server("Quest is not in progress"), ErrorMapper.map(error))
     }

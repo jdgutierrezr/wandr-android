@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Facade over Supabase Auth plus the profile row created right after sign up. */
 @Singleton
 class AuthRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
@@ -21,13 +20,11 @@ class AuthRemoteDataSource @Inject constructor(
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
-    /** Creates the account and returns its id. Needs "Confirm email" off in Supabase Auth. */
     suspend fun signUp(email: String, password: String): String {
         supabase.auth.signUpWith(Email) {
             this.email = email
             this.password = password
         }
-        // Without a session the profile insert would be rejected by RLS
         return supabase.auth.currentUserOrNull()?.id
             ?: throw AppException(AppError.Server("Check your email to confirm your account, then log in"))
     }

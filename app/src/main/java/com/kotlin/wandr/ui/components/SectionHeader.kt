@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/** Small uppercase label above a group: "OBJECTIVES", "INTERESTS", "ENERGY LEVEL". */
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: String? = null) {
     Row(
@@ -26,7 +25,6 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: String? 
     }
 }
 
-/** Section title with an optional counter and action: "Achievements  2/8 ........ View All". */
 @Composable
 fun SectionHeader(
     title: String,

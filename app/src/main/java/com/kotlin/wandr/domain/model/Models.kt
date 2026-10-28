@@ -2,14 +2,7 @@ package com.kotlin.wandr.domain.model
 
 import java.time.Instant
 
-/*
- * Models the ViewModels and the future UI work with.
- * They do not know about JSON (DTOs) or Room (entities); the mappers translate.
- */
-
 data class GeoPoint(val latitude: Double, val longitude: Double)
-
-// ---------- Users and progress ----------
 
 data class UserProfile(
     val id: String,
@@ -22,7 +15,6 @@ data class UserProfile(
     val tier: Tier,
     val energyLevel: EnergyLevel?,
 ) {
-    /** XP inside the current level (a level is 200 XP), for the progress bar. */
     val xpIntoLevel: Int get() = currentXp % XP_PER_LEVEL
 
     companion object {
@@ -40,8 +32,6 @@ data class QuestHistoryItem(
     val pointsReward: Int,
     val completedAt: Instant,
 )
-
-// ---------- Places and quests ----------
 
 data class Place(
     val id: String,
@@ -88,7 +78,6 @@ data class QuestDetail(
     val objectives: List<QuestObjective>,
 )
 
-/** A quest the user started and has not finished ("pending"). */
 data class ActiveQuest(
     val completionId: String,
     val questId: String,
@@ -102,7 +91,6 @@ data class ActiveQuest(
     val nextObjective: QuestObjective? get() = objectives.firstOrNull { it.id !in completedObjectiveIds }
 }
 
-/** What `complete_objective` returns. Progress fields are null until the quest is completed. */
 data class ObjectiveResult(
     val completedObjectives: Int,
     val totalObjectives: Int,
@@ -114,8 +102,6 @@ data class ObjectiveResult(
     val currentStreak: Int?,
     val newBadges: List<Badge>,
 )
-
-// ---------- Events ----------
 
 data class Event(
     val id: String,

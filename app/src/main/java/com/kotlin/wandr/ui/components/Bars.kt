@@ -27,10 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.kotlin.wandr.ui.theme.WandrTheme
 import androidx.compose.material.icons.filled.*
 
-/**
- * Top bar of the main screens: "Discovery Map  🔥3 ...... [filters] [bell] [avatar]".
- * [onBack] adds the back arrow (detail screens). [streak] shows the fire counter next to the title.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WandrTopBar(
@@ -58,7 +54,6 @@ fun WandrTopBar(
     )
 }
 
-/** Tabs of the bottom bar, in the order of the mockups. */
 enum class MainTab(
     val label: String,
     val icon: ImageVector,

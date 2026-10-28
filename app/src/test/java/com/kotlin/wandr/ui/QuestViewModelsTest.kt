@@ -59,8 +59,6 @@ class QuestViewModelsTest {
         every { locationUpdates(any(), any()) } returns gps
     }
 
-    // ---------- Home ----------
-
     private fun home(nearby: Resource<List<com.kotlin.wandr.domain.model.Quest>>): HomeViewModel {
         every { questRepository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Loading, nearby)
         return HomeViewModel(questRepository, locationProvider)
@@ -92,8 +90,6 @@ class QuestViewModelsTest {
         assertTrue(viewModel.uiState.value.isShowingSavedData)
     }
 
-    // ---------- Quest detail ----------
-
     @Test
     fun `quest detail starts the quest and asks to open the tracker`() {
         val detail = QuestDetail(quest("q1"), place = null, objectives = listOf(objective("o1", "q1", 1)))
@@ -122,8 +118,6 @@ class QuestViewModelsTest {
         viewModel.startQuest()
         assertEquals("You already completed this quest", viewModel.uiState.value.errorMessage)
     }
-
-    // ---------- Active quest ----------
 
     private val photoStep = objective("o2", "q1", 2, requiresPhoto = true)
     private val active = activeQuest("q1", listOf(objective("o1", "q1", 1), photoStep), done = setOf("o1"))

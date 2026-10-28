@@ -37,7 +37,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object SupabaseModule {
 
-    /** Singleton: one client (and one session) for the whole app. */
     @Provides
     @Singleton
     fun provideSupabaseClient(): SupabaseClient = createSupabaseClient(
@@ -59,7 +58,6 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WandrDatabase =
         Room.databaseBuilder(context, WandrDatabase::class.java, WandrDatabase.NAME)
-            // It is only a cache: if the schema changes, rebuilding it is enough
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
