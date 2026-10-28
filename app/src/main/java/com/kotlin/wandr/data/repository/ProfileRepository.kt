@@ -15,7 +15,6 @@ import com.kotlin.wandr.data.mapper.toHistoryItem
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.ProfileRemoteDataSource
 import com.kotlin.wandr.domain.model.EarnedBadge
-import com.kotlin.wandr.domain.model.EnergyLevel
 import com.kotlin.wandr.domain.model.QuestHistoryItem
 import com.kotlin.wandr.domain.model.StreakSummary
 import com.kotlin.wandr.domain.model.UserProfile
@@ -33,7 +32,6 @@ interface ProfileRepository {
     /** Downloads the profile into the cache and returns it. */
     suspend fun refreshProfile(): Result<UserProfile>
 
-    suspend fun updateEnergyLevel(level: EnergyLevel): Result<Unit>
 
     /** Downloads the profile, badges and history again (after finishing a quest, for example). */
     suspend fun refreshAll(): Result<Unit>
@@ -75,12 +73,6 @@ class ProfileRepositoryImpl @Inject constructor(
     )
 
     override suspend fun refreshProfile() = safeCall { downloadProfile().toDomain() }
-
-    override suspend fun updateEnergyLevel(level: EnergyLevel) = safeCall {
-        remote.updateEnergyLevel(level.apiValue)
-        downloadProfile()
-        Unit
-    }
 
     override suspend fun refreshAll() = safeCall {
         downloadProfile()

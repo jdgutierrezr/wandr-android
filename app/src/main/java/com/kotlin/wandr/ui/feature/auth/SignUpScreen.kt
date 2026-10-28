@@ -24,15 +24,15 @@ import com.kotlin.wandr.ui.theme.WandrTheme
 
 @Composable
 fun SignUpRoute(
-    onSignedUp: (AfterAuthDestination) -> Unit,
+    onSignedUp: () -> Unit,
     onGoToLogin: () -> Unit,
     viewModel: SignUpViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.destination) {
-        state.destination?.let(onSignedUp)
+    LaunchedEffect(state.isSignedUp) {
+        if (state.isSignedUp) onSignedUp()
     }
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {

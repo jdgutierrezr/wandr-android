@@ -11,14 +11,11 @@ import com.kotlin.wandr.data.remote.dto.ActiveCompletionDto
 import com.kotlin.wandr.data.remote.dto.ActiveQuestInfoDto
 import com.kotlin.wandr.data.remote.dto.CountDto
 import com.kotlin.wandr.data.remote.dto.EventDto
-import com.kotlin.wandr.data.remote.dto.FriendshipDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveCompletionDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveResultDto
 import com.kotlin.wandr.data.remote.dto.UserDto
-import com.kotlin.wandr.data.remote.dto.UserSummaryDto
 import com.kotlin.wandr.domain.model.EnergyLevel
-import com.kotlin.wandr.domain.model.FriendshipStatus
 import com.kotlin.wandr.domain.model.Tier
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -72,26 +69,6 @@ class MappersTest {
     fun `event without attendees has zero`() {
         val dto = EventDto(id = "e1", title = "t", startsAt = "2026-09-28T19:00:00+00:00", attendees = listOf(CountDto(0)))
         assertEquals(0, dto.toEntity(isAttending = false).toDomain().attendees)
-    }
-
-    @Test
-    fun `friendship shows the other user and only the receiver can accept`() {
-        val dto = FriendshipDto(
-            id = "f1", userId1 = "santiago", userId2 = "juan", status = "pending",
-            createdAt = "2026-09-20T10:00:00+00:00",
-            requester = UserSummaryDto("santiago", "Santiago Ramirez"),
-            receiver = UserSummaryDto("juan", "Juan David Suarez"),
-        )
-
-        val forJuan = dto.toDomain(myId = "juan")
-        assertEquals("Santiago Ramirez", forJuan.otherUser.name)
-        assertTrue(forJuan.isIncoming)
-        assertTrue(forJuan.canAccept)
-
-        val forSantiago = dto.toDomain(myId = "santiago")
-        assertEquals("Juan David Suarez", forSantiago.otherUser.name)
-        assertFalse(forSantiago.canAccept)
-        assertEquals(FriendshipStatus.PENDING, forSantiago.status)
     }
 
     @Test

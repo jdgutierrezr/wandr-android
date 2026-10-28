@@ -12,13 +12,11 @@ import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
-import com.kotlin.wandr.data.repository.TagRepository
 import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
-import com.kotlin.wandr.domain.model.Tag
 import com.kotlin.wandr.testutil.MainDispatcherRule
 import com.kotlin.wandr.testutil.activeQuest
 import com.kotlin.wandr.testutil.objective
@@ -48,7 +46,6 @@ class QuestViewModelsTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
     private val questRepository = mockk<QuestRepository>()
-    private val tagRepository = mockk<TagRepository>()
     private val storageRepository = mockk<StorageRepository>()
     /** Drop-off data for the smart hint. Default: one abandon of q1 after step 1. */
     private val analyticsRepository = mockk<AnalyticsRepository> {
@@ -71,21 +68,16 @@ class QuestViewModelsTest {
 
     private fun home(nearby: Resource<List<com.kotlin.wandr.domain.model.Quest>>): HomeViewModel {
         every { questRepository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Loading, nearby)
-        every { tagRepository.observeInterestIds() } returns flowOf(setOf("t-food"))
-        every { tagRepository.observeTags(any()) } returns
-            flowOf(Resource.Success(listOf(Tag("t-food", "food"), Tag("t-music", "music"))))
-        return HomeViewModel(questRepository, tagRepository, locationProvider, bus)
+        return HomeViewModel(questRepository, locationProvider)
     }
 
     @Test
-    fun `home recommends quests that match the user's interests`() {
+    fun `home lists the nearby quests and the available tags`() {
         val viewModel = home(Resource.Success(listOf(quest("q1", "music"), quest("q2", "food", "outdoors"))))
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals(2, state.quests.size)
-        assertEquals(listOf("q2"), state.recommendations.map { it.quest.id })
-        assertEquals("food", state.recommendations.single().becauseYouLiked)
         assertEquals(listOf("food", "music", "outdoors"), state.availableTags)
         assertEquals(UserLocation.Source.FALLBACK, state.locationSource)
     }
@@ -103,14 +95,6 @@ class QuestViewModelsTest {
     fun `home tells the user when it shows saved data`() {
         val viewModel = home(Resource.Success(listOf(quest("q1")), isStale = true))
         assertTrue(viewModel.uiState.value.isShowingSavedData)
-    }
-
-    @Test
-    fun `home reloads by itself when the connection returns`() = runTest {
-        val viewModel = home(Resource.Success(listOf(quest("q1")), isStale = true))
-        bus.publish(AppEvent.ConnectivityChanged(isOnline = true))
-        verify(exactly = 2) { questRepository.nearbyQuests(any(), any(), any()) }
-        assertTrue(viewModel.uiState.value.quests.isNotEmpty())
     }
 
     // ---------- Quest detail ----------

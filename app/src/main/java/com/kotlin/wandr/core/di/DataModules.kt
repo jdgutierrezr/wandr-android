@@ -11,12 +11,6 @@ import com.kotlin.wandr.data.repository.AuthRepository
 import com.kotlin.wandr.data.repository.AuthRepositoryImpl
 import com.kotlin.wandr.data.repository.EventRepository
 import com.kotlin.wandr.data.repository.EventRepositoryImpl
-import com.kotlin.wandr.data.repository.FriendRepository
-import com.kotlin.wandr.data.repository.FriendRepositoryImpl
-import com.kotlin.wandr.data.repository.LocationRepository
-import com.kotlin.wandr.data.repository.LocationRepositoryImpl
-import com.kotlin.wandr.data.repository.NotificationRepository
-import com.kotlin.wandr.data.repository.NotificationRepositoryImpl
 import com.kotlin.wandr.data.repository.PlaceRepository
 import com.kotlin.wandr.data.repository.PlaceRepositoryImpl
 import com.kotlin.wandr.data.repository.ProfileRepository
@@ -25,8 +19,6 @@ import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.QuestRepositoryImpl
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.StorageRepositoryImpl
-import com.kotlin.wandr.data.repository.TagRepository
-import com.kotlin.wandr.data.repository.TagRepositoryImpl
 import com.kotlin.wandr.data.repository.TelemetryQuestRepository
 import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.data.repository.TelemetryRepositoryImpl
@@ -76,7 +68,6 @@ object DatabaseModule {
             .build()
 
     @Provides fun provideProfileDao(db: WandrDatabase) = db.profileDao()
-    @Provides fun provideTagDao(db: WandrDatabase) = db.tagDao()
     @Provides fun provideQuestDao(db: WandrDatabase) = db.questDao()
     @Provides fun providePlaceDao(db: WandrDatabase) = db.placeDao()
     @Provides fun provideEventDao(db: WandrDatabase) = db.eventDao()
@@ -89,13 +80,9 @@ abstract class RepositoryModule {
 
     @Binds abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
     @Binds abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
-    @Binds abstract fun bindTagRepository(impl: TagRepositoryImpl): TagRepository
     @Binds abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
     @Binds abstract fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
-    @Binds abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
-    @Binds abstract fun bindFriendRepository(impl: FriendRepositoryImpl): FriendRepository
-    @Binds abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
     @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
 

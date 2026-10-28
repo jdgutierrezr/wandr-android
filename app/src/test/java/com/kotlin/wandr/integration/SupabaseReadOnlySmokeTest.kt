@@ -4,13 +4,9 @@ import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.EventRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.FriendRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.LocationRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.NotificationRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.PlaceRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.ProfileRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.QuestRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.TagRemoteDataSource
 import com.kotlin.wandr.data.mapper.toDomain
 import com.kotlin.wandr.data.mapper.toEntity
 import com.kotlin.wandr.data.mapper.toRows
@@ -70,10 +66,6 @@ class SupabaseReadOnlySmokeTest {
         assertEquals(me.currentXp, streak.points)
         assertEquals(me.currentStreak, streak.currentStreak)
 
-        val tags = TagRemoteDataSource(supabase)
-        println("tags: " + tags.fetchTags().map { it.name })
-        println("interests: " + tags.fetchInterestIds())
-
         val quests = QuestRemoteDataSource(supabase)
         val nearby = quests.nearbyQuests(4.6097, -74.0817, 15.0)
         println("nearby quests: " + nearby.map { "${it.title} (${it.distanceKm} km)" })
@@ -97,12 +89,5 @@ class SupabaseReadOnlySmokeTest {
         val events = EventRemoteDataSource(supabase)
         val mine = events.myEventIds()
         println("events: " + events.upcomingEvents(Instant.now()).map { it.toEntity(it.id in mine).toDomain() })
-
-        val friends = FriendRemoteDataSource(supabase)
-        println("friendships: " + friends.friendships().map { it.toDomain(friends.userId()) })
-        println("search 'san': " + friends.searchUsers("san").map { it.name })
-
-        println("notifications: " + NotificationRemoteDataSource(supabase).notifications().map { it.toDomain() })
-        println("friends on map: " + LocationRemoteDataSource(supabase).friendsOnMap().map { it.toDomain() })
     }
 }

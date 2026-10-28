@@ -30,10 +30,6 @@ data class UserProfile(
     }
 }
 
-data class UserSummary(val id: String, val name: String, val profilePicture: String?)
-
-data class Tag(val id: String, val name: String)
-
 data class Badge(val id: String, val name: String, val description: String?, val iconUrl: String?)
 
 data class EarnedBadge(val badge: Badge, val earnedAt: Instant)
@@ -138,34 +134,3 @@ data class Event(
 }
 
 data class RsvpResult(val eventId: String, val attendees: Int, val capacity: Int?)
-
-// ---------- Social ----------
-
-data class Friendship(
-    val id: String,
-    val otherUser: UserSummary,
-    val status: FriendshipStatus,
-    /** True if the other person sent the request (only then can the user accept it). */
-    val isIncoming: Boolean,
-    val createdAt: Instant,
-) {
-    val canAccept: Boolean get() = status == FriendshipStatus.PENDING && isIncoming
-}
-
-data class FriendOnMap(
-    val userId: String,
-    val name: String,
-    val profilePicture: String?,
-    val location: GeoPoint,
-    val updatedAt: Instant,
-    val distanceKm: Double?,
-    val activeQuest: String?,
-)
-
-data class Notification(
-    val id: String,
-    val type: NotificationType,
-    val content: String?,
-    val isRead: Boolean,
-    val createdAt: Instant,
-)

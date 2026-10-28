@@ -26,15 +26,3 @@ data class UserBadgeEntity(
     val iconUrl: String?,
     val earnedAtMillis: Long,
 )
-
-@Entity(tableName = "tags")
-data class TagEntity(
-    @PrimaryKey val id: String,
-    val name: String,
-)
-
-/** Tags the logged-in user picked during onboarding. */
-@Entity(tableName = "user_interests")
-data class UserInterestEntity(
-    @PrimaryKey val tagId: String,
-)

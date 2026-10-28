@@ -2,23 +2,18 @@ package com.kotlin.wandr.data.mapper
 
 import com.kotlin.wandr.data.local.entity.CompletionEntity
 import com.kotlin.wandr.data.local.entity.ProfileEntity
-import com.kotlin.wandr.data.local.entity.TagEntity
 import com.kotlin.wandr.data.local.entity.UserBadgeEntity
 import com.kotlin.wandr.data.remote.dto.BadgeDto
 import com.kotlin.wandr.data.remote.dto.QuestHistoryDto
-import com.kotlin.wandr.data.remote.dto.TagDto
 import com.kotlin.wandr.data.remote.dto.UserBadgeDto
 import com.kotlin.wandr.data.remote.dto.UserDto
-import com.kotlin.wandr.data.remote.dto.UserSummaryDto
 import com.kotlin.wandr.domain.model.Badge
 import com.kotlin.wandr.domain.model.EarnedBadge
 import com.kotlin.wandr.domain.model.EnergyLevel
 import com.kotlin.wandr.domain.model.QuestHistoryItem
 import com.kotlin.wandr.domain.model.QuestStatus
-import com.kotlin.wandr.domain.model.Tag
 import com.kotlin.wandr.domain.model.Tier
 import com.kotlin.wandr.domain.model.UserProfile
-import com.kotlin.wandr.domain.model.UserSummary
 
 // ---------- Profile ----------
 
@@ -45,14 +40,6 @@ fun ProfileEntity.toDomain() = UserProfile(
     tier = Tier.fromApi(tier),
     energyLevel = EnergyLevel.fromApi(energyLevel),
 )
-
-fun UserSummaryDto.toDomain() = UserSummary(id = id, name = name, profilePicture = profilePicture)
-
-// ---------- Tags ----------
-
-fun TagDto.toEntity() = TagEntity(id = id, name = name)
-
-fun TagEntity.toDomain() = Tag(id = id, name = name)
 
 // ---------- Badges ----------
 

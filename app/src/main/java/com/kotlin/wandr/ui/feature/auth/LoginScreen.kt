@@ -27,17 +27,16 @@ import com.kotlin.wandr.ui.theme.WandrTheme
  */
 @Composable
 fun LoginRoute(
-    onLoggedIn: (AfterAuthDestination) -> Unit,
+    onLoggedIn: () -> Unit,
     onGoToSignUp: () -> Unit,
-    onOpenCatalog: (() -> Unit)? = null,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Runs again only when `destination` changes
-    LaunchedEffect(state.destination) {
-        state.destination?.let(onLoggedIn)
+    // Runs again only when `isLoggedIn` changes
+    LaunchedEffect(state.isLoggedIn) {
+        if (state.isLoggedIn) onLoggedIn()
     }
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
@@ -53,7 +52,6 @@ fun LoginRoute(
         onPasswordChange = viewModel::onPasswordChange,
         onSubmit = viewModel::submit,
         onGoToSignUp = onGoToSignUp,
-        onOpenCatalog = onOpenCatalog,
     )
 }
 
@@ -69,7 +67,6 @@ fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onGoToSignUp: () -> Unit,
-    onOpenCatalog: (() -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     val submit = {
@@ -112,9 +109,6 @@ fun LoginScreen(
                 onClick = onGoToSignUp,
                 enabled = !state.isLoading,
             )
-            if (onOpenCatalog != null) {
-                LinkButton(text = "Design system (debug)", onClick = onOpenCatalog)
-            }
         },
     )
 }

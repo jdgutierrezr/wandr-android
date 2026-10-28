@@ -1,16 +1,8 @@
 package com.kotlin.wandr.ui.navigation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -22,7 +14,6 @@ import androidx.navigation.toRoute
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.ui.catalog.ComponentCatalog
 import com.kotlin.wandr.ui.components.MainTab
-import com.kotlin.wandr.ui.feature.auth.AfterAuthDestination
 import com.kotlin.wandr.ui.feature.auth.LoginRoute
 import com.kotlin.wandr.ui.feature.auth.SignUpRoute
 import com.kotlin.wandr.ui.feature.events.ExploreRoute
@@ -52,9 +43,6 @@ data object LoginDestination
 
 @Serializable
 data object SignUpDestination
-
-@Serializable
-data object OnboardingDestination
 
 @Serializable
 data object HomeDestination
@@ -161,7 +149,7 @@ fun WandrNavHost(
             LoginRoute(
 
                 onLoggedIn = {
-                    navController.leaveAuthTo(it)
+                    navController.leaveAuthTo()
                 },
 
                 onGoToSignUp = {
@@ -169,17 +157,6 @@ fun WandrNavHost(
                         SignUpDestination
                     )
                 },
-
-                onOpenCatalog =
-                    if (BuildConfig.DEBUG) {
-                        {
-                            navController.navigate(
-                                CatalogDestination
-                            )
-                        }
-                    } else {
-                        null
-                    },
             )
         }
 
@@ -193,7 +170,7 @@ fun WandrNavHost(
             SignUpRoute(
 
                 onSignedUp = {
-                    navController.leaveAuthTo(it)
+                    navController.leaveAuthTo()
                 },
 
                 onGoToLogin = {
@@ -214,39 +191,6 @@ fun WandrNavHost(
                 onBack = {
                     navController.popBackStack()
                 },
-            )
-        }
-
-
-        // =====================================================
-        // ONBOARDING
-        // =====================================================
-
-        val shortcutLinks = listOf(
-            "Discovery map" to {
-                navController.navigate(
-                    MapDestination
-                )
-            },
-
-            "My quests in progress" to {
-                navController.navigate(
-                    ActiveQuestsDestination
-                )
-            },
-
-            "Abandonment funnel (BQ8)" to {
-                navController.navigate(
-                    QuestDropoffDestination
-                )
-            },
-        )
-
-        composable<OnboardingDestination> {
-
-            ComingSoon(
-                "Onboarding",
-                links = shortcutLinks,
             )
         }
 
@@ -425,21 +369,9 @@ fun WandrNavHost(
 // AUTH NAVIGATION
 // =============================================================
 
-private fun NavHostController.leaveAuthTo(
-    destination: AfterAuthDestination,
-) {
+private fun NavHostController.leaveAuthTo() {
 
-    val target: Any =
-        when (destination) {
-
-            AfterAuthDestination.ONBOARDING ->
-                OnboardingDestination
-
-            AfterAuthDestination.HOME ->
-                HomeDestination
-        }
-
-    navigate(target) {
+    navigate(HomeDestination) {
 
         popUpTo(
             LoginDestination
@@ -538,44 +470,5 @@ private fun NavHostController.openTab(
         }
 
         restoreState = true
-    }
-}
-
-
-// =============================================================
-// COMING SOON
-// =============================================================
-
-@Composable
-private fun ComingSoon(
-    name: String,
-    links: List<Pair<String, () -> Unit>> = emptyList(),
-) {
-
-    Column(
-        verticalArrangement =
-            Arrangement.Center,
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally,
-
-        modifier =
-            Modifier.fillMaxSize(),
-    ) {
-
-        Text(
-            "$name screen coming soon",
-            style =
-                MaterialTheme.typography.titleMedium,
-        )
-
-        links.forEach { (text, onClick) ->
-
-            TextButton(
-                onClick = onClick,
-            ) {
-                Text(text)
-            }
-        }
     }
 }

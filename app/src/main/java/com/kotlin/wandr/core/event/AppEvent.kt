@@ -50,6 +50,4 @@ sealed interface AppEvent {
 
     data class EventJoined(val eventId: String) : AppEvent
     data class EventLeft(val eventId: String) : AppEvent
-
-    data object FriendshipsChanged : AppEvent
 }

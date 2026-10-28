@@ -3,11 +3,9 @@ package com.kotlin.wandr.data.mapper
 import com.kotlin.wandr.data.local.entity.EventEntity
 import com.kotlin.wandr.data.local.entity.PlaceEntity
 import com.kotlin.wandr.data.remote.dto.EventDto
-import com.kotlin.wandr.data.remote.dto.FriendOnMapDto
 import com.kotlin.wandr.data.remote.dto.PlaceDto
 import com.kotlin.wandr.data.remote.dto.RsvpResultDto
 import com.kotlin.wandr.domain.model.Event
-import com.kotlin.wandr.domain.model.FriendOnMap
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.PlaceCategory
@@ -37,16 +35,6 @@ fun PlaceEntity.toDomain() = Place(
     averageRating = averageRating,
     coverImageUrl = coverImageUrl,
     distanceKm = distanceKm,
-)
-
-fun FriendOnMapDto.toDomain() = FriendOnMap(
-    userId = userId,
-    name = name,
-    profilePicture = profilePicture,
-    location = GeoPoint(latitude, longitude),
-    updatedAt = updatedAt.toInstant(),
-    distanceKm = distanceKm,
-    activeQuest = activeQuest,
 )
 
 // ---------- Events ----------

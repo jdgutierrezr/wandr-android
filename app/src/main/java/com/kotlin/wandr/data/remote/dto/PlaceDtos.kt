@@ -20,26 +20,3 @@ data class PlaceDto(
 /** Embedded `places(name)`. */
 @Serializable
 data class PlaceNameDto(val name: String)
-
-/** Body of the `user_locations` upsert. */
-@Serializable
-data class UserLocationDto(
-    @SerialName("user_id") val userId: String,
-    val latitude: Double,
-    val longitude: Double,
-    @SerialName("is_broadcasting") val isBroadcasting: Boolean,
-    @SerialName("updated_at") val updatedAt: String,
-)
-
-/** Row returned by the `friends_on_map` RPC. */
-@Serializable
-data class FriendOnMapDto(
-    @SerialName("user_id") val userId: String,
-    val name: String,
-    @SerialName("profile_picture") val profilePicture: String? = null,
-    val latitude: Double,
-    val longitude: Double,
-    @SerialName("updated_at") val updatedAt: String,
-    @SerialName("distance_km") val distanceKm: Double? = null,
-    @SerialName("active_quest") val activeQuest: String? = null,
-)

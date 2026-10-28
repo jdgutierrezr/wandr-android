@@ -26,26 +26,6 @@ data class NewUserDto(
 )
 
 @Serializable
-data class UserSummaryDto(
-    val id: String,
-    val name: String,
-    @SerialName("profile_picture") val profilePicture: String? = null,
-)
-
-@Serializable
-data class TagDto(
-    val id: String,
-    val name: String,
-)
-
-/** Row of `user_interests`. */
-@Serializable
-data class UserInterestDto(
-    @SerialName("user_id") val userId: String,
-    @SerialName("tag_id") val tagId: String,
-)
-
-@Serializable
 data class BadgeDto(
     val id: String,
     val name: String,
