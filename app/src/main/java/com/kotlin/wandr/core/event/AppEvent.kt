@@ -8,14 +8,6 @@ sealed interface AppEvent {
 
     data class ConnectivityChanged(val isOnline: Boolean) : AppEvent
 
-    /** A measured backend call. Collected by the telemetry (BQ1 / BQ2). */
-    data class RequestTimed(
-        val name: String,
-        val durationMs: Long,
-        val success: Boolean,
-        val metadata: Map<String, String> = emptyMap(),
-    ) : AppEvent
-
     data object SignedIn : AppEvent
     data object SignedOut : AppEvent
 

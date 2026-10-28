@@ -3,7 +3,6 @@ package com.kotlin.wandr.core.di
 import android.content.Context
 import androidx.room.Room
 import com.kotlin.wandr.BuildConfig
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.data.local.WandrDatabase
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.AnalyticsRepositoryImpl
@@ -19,9 +18,6 @@ import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.QuestRepositoryImpl
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.StorageRepositoryImpl
-import com.kotlin.wandr.data.repository.TelemetryQuestRepository
-import com.kotlin.wandr.data.repository.TelemetryRepository
-import com.kotlin.wandr.data.repository.TelemetryRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -71,7 +67,6 @@ object DatabaseModule {
     @Provides fun provideQuestDao(db: WandrDatabase) = db.questDao()
     @Provides fun providePlaceDao(db: WandrDatabase) = db.placeDao()
     @Provides fun provideEventDao(db: WandrDatabase) = db.eventDao()
-    @Provides fun provideTelemetryDao(db: WandrDatabase) = db.telemetryDao()
 }
 
 @Module
@@ -83,14 +78,6 @@ abstract class RepositoryModule {
     @Binds abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
     @Binds abstract fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
-    @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
-
-    companion object {
-        /** Decorator: whoever asks for a [QuestRepository] gets the measured one. */
-        @Provides
-        @Singleton
-        fun provideQuestRepository(impl: QuestRepositoryImpl, eventBus: AppEventBus): QuestRepository =
-            TelemetryQuestRepository(inner = impl, eventBus = eventBus)
-    }
+    @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
 }
