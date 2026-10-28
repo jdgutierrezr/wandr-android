@@ -37,7 +37,6 @@ flowchart TB
             DI["Dependency injection (Hilt)"]
             Bus["Event bus"]
             Strategy["Fetch strategies"]
-            Telemetry["Telemetry"]
             Device["Connectivity and location"]
         end
     end
@@ -64,7 +63,6 @@ flowchart TB
     Repos --> Mappers
     Repos --> Strategy
     Repos --> Bus
-    Telemetry --> Bus
     Remote -->|"HTTPS"| Auth & API & Storage
     Auth & API & Storage --> DB
     Local --> SQLite
@@ -78,47 +76,42 @@ flowchart TB
 - **ViewModel:** one per screen. It holds the screen's state (`UiState`) and decides what to ask the Model for.
 - **Model:** the domain models plus the data layer (repositories, Supabase data sources, Room). It owns the data and the access to it.
 
-- **Why this separation:** a screen never talks to Supabase or Room. It only renders the state of its ViewModel. This lets the team build screens and data access in parallel, and lets us test the logic without a device (58 unit tests run on the JVM).
+- **Why this separation:** a screen never talks to Supabase or Room. It only renders the state of its ViewModel. This lets the team build screens and data access in parallel, and lets us test the logic without a device (70 unit tests run on the JVM).
 - **Why MVVM:** it is the pattern Google recommends for Compose. The ViewModel survives screen rotation and holds the state, so the UI is a pure function of that state.
 - **Why a data layer with two sources:** the quality scenarios require the app to keep working without a connection (QS1) and to keep quest progress (QS8). The data layer hides whether the data comes from Supabase or from the local Room cache.
 - **Why Supabase as the whole backend:** it already provides login, a REST API over PostgreSQL, storage and row-level security. The team does not need to run its own server. Business rules that must not be bypassed, such as XP, badges and event capacity, run in the database as RPC functions.
-- **Why a `core` module:** injection, events, connectivity, location and telemetry are used by several features. Keeping them in one place avoids duplicating them in every feature.
+- **Why a `core` module:** injection, events, connectivity and location are used by several features. Keeping them in one place avoids duplicating them in every feature.
 
 ### Diagram 2: MVVM components per screen
-
-Solid boxes in the View column are built. Dashed boxes are planned screens whose ViewModel already exists.
 
 ```mermaid
 flowchart LR
     subgraph VIEW["VIEW · Compose screens"]
         direction TB
+        SplashS["SplashScreen"]
         LoginS["LoginScreen"]
         SignUpS["SignUpScreen"]
-        OnbS["OnboardingScreen"]:::planned
-        HomeS["HomeScreen<br/>(Discovery Engine)"]:::planned
-        DetailS["QuestDetailScreen"]:::planned
-        ActiveS["ActiveQuestScreen"]:::planned
+        HomeS["HomeScreen<br/>(Discovery Engine)"]
+        ExploreS["ExploreScreen"]
         MapS["MapScreen"]
-        FMapS["FriendsMapScreen"]:::planned
-        EventsS["EventsScreen"]:::planned
-        FriendsS["FriendsScreen"]:::planned
-        NotifS["NotificationsScreen"]:::planned
-        ProfileS["ProfileScreen"]:::planned
+        DetailS["QuestDetailScreen"]
+        ActiveS["ActiveQuestScreen"]
+        ActiveListS["ActiveQuestsScreen<br/>(Saved tab)"]
+        DropoffS["QuestDropoffScreen<br/>(debug builds)"]
+        ProfileS["ProfileScreen"]
     end
 
     subgraph VMS["VIEWMODEL"]
         direction TB
+        SessionVM["SessionViewModel"]
         LoginVM["LoginViewModel"]
         SignUpVM["SignUpViewModel"]
-        OnbVM["OnboardingViewModel"]
         HomeVM["HomeViewModel"]
+        ExploreVM["ExploreViewModel"]
+        MapVM["MapViewModel"]
         DetailVM["QuestDetailViewModel"]
         ActiveVM["ActiveQuestViewModel"]
-        MapVM["MapViewModel"]
-        FMapVM["FriendsMapViewModel"]
-        EventsVM["EventsViewModel"]
-        FriendsVM["FriendsViewModel"]
-        NotifVM["NotificationsViewModel"]
+        DropoffVM["QuestDropoffViewModel"]
         ProfileVM["ProfileViewModel"]
     end
 
@@ -126,65 +119,60 @@ flowchart LR
         direction TB
         AuthR["AuthRepository"]
         ProfileR["ProfileRepository"]
-        TagR["TagRepository"]
         QuestR["QuestRepository"]
         StorageR["StorageRepository"]
         PlaceR["PlaceRepository"]
-        LocR["LocationRepository"]
         EventR["EventRepository"]
-        FriendR["FriendRepository"]
-        NotifR["NotificationRepository"]
+        AnalyticsR["AnalyticsRepository"]
     end
 
     LocP["LocationProvider<br/>(device GPS)"]
+    MapA["WandrMap<br/>(GoogleMapAdapter)"]
     Room[("Room cache")]
     SB["Supabase"]
 
+    SplashS --> SessionVM
     LoginS --> LoginVM
     SignUpS --> SignUpVM
-    OnbS --> OnbVM
     HomeS --> HomeVM
+    ExploreS --> ExploreVM
+    MapS --> MapVM
+    MapS --> MapA
     DetailS --> DetailVM
     ActiveS --> ActiveVM
-    MapS --> MapVM
-    FMapS --> FMapVM
-    EventsS --> EventsVM
-    FriendsS --> FriendsVM
-    NotifS --> NotifVM
+    ActiveListS --> ActiveVM
+    DropoffS --> DropoffVM
     ProfileS --> ProfileVM
 
-    LoginVM --> AuthR & ProfileR & TagR
+    SessionVM --> AuthR
+    LoginVM --> AuthR
     SignUpVM --> AuthR
-    OnbVM --> TagR & ProfileR
-    HomeVM --> QuestR & TagR
-    DetailVM --> QuestR
-    ActiveVM --> QuestR & StorageR
+    HomeVM --> QuestR
+    ExploreVM --> EventR & QuestR
     MapVM --> QuestR & PlaceR
-    FMapVM --> LocR
-    EventsVM --> EventR
-    FriendsVM --> FriendR
-    NotifVM --> NotifR
+    DetailVM --> QuestR
+    ActiveVM --> QuestR & StorageR & AnalyticsR
+    DropoffVM --> AnalyticsR
     ProfileVM --> ProfileR & AuthR
 
-    HomeVM & MapVM & FMapVM --> LocP
+    HomeVM & ExploreVM & MapVM & ActiveVM --> LocP
 
-    ProfileR & TagR & QuestR & PlaceR & EventR --> Room
+    ProfileR & QuestR & PlaceR & EventR --> Room
     MODEL --> SB
-
-    classDef planned stroke-dasharray: 5 5
 ```
 
 **Rationale:** This diagram shows the MVVM rule applied to every feature: one View, one ViewModel, and only the repositories that screen needs.
 
-- **One ViewModel per screen:** each screen has its own state and its own reasons to change. A shared "god" ViewModel would make every screen depend on every repository.
-- **ViewModels never talk to each other:** when two screens care about the same thing, they share a repository (the data) or hear the same event (see Diagram 6). For example, `LoginViewModel` and `ProfileViewModel` both use `ProfileRepository`.
-- **Repositories are split by domain, not by screen:** `QuestRepository` serves three screens (Home, Quest Details, Active Quest). The logic for quests exists once.
-- **Only five repositories use the Room cache:** profile, tags, quests, places and events are what the user must see offline (QS1, QS8). Friends, notifications and the friends map are live data, so they always come from Supabase.
-- **Location is a device service, not a repository:** `LocationProvider` reads the GPS. Only the three screens that need the user's position depend on it.
+- **One ViewModel per screen:** each screen has its own state and its own reasons to change. A shared "god" ViewModel would make every screen depend on every repository. The Saved tab and the Active Quest screen share `ActiveQuestViewModel` because both show the same data: the quests in progress.
+- **ViewModels never talk to each other:** when two screens care about the same thing, they share a repository (the data) or hear the same event (see Diagram 6). For example, `ProfileViewModel` updates because `CacheInvalidator` refreshes `ProfileRepository` after a quest.
+- **Repositories are split by domain, not by screen:** `QuestRepository` serves five screens (Home, Explore, Map, Quest Details, Active Quest). The logic for quests exists once.
+- **Only four repositories use the Room cache:** profile, quests, places and events are what the user must see offline (QS1, QS8). Auth, photo storage and the drop-off analytics always need the network.
+- **Location is a device service, not a repository:** `LocationProvider` reads the GPS. Only the four screens that need the user's position depend on it.
+- **The map is behind an interface too:** `MapScreen` draws a `WandrMap`, and `GoogleMapAdapter` is the only class that imports Google Maps.
 
 ### Diagram 3: Components of the data layer
 
-This diagram zooms into one repository of Diagram 2. It uses quests as the example. The other domains (profile, places, events, friends, notifications) follow the same shape.
+This diagram zooms into one repository of Diagram 2. It uses quests as the example. The other domains (profile, places, events) follow the same shape.
 
 ```mermaid
 flowchart TB
@@ -192,7 +180,6 @@ flowchart TB
 
     subgraph DATA["MODEL · Data layer"]
         RepoI["«interface» QuestRepository"]
-        Deco["TelemetryQuestRepository<br/>(Decorator)"]
         Impl["QuestRepositoryImpl"]
         Strat["FetchStrategy<br/>NetworkFirst · CacheFirst · CacheOnly"]
         Mapper["Mappers<br/>DTO ↔ Entity ↔ Model"]
@@ -204,20 +191,16 @@ flowchart TB
 
     subgraph EVT["Event subscribers"]
         Bus["AppEventBus"]
-        Tel["TelemetryCollector"]
         Inv["CacheInvalidator"]
-        Conn["ConnectivityObserver"]
     end
 
     subgraph SB["Supabase"]
         API["Auth · PostgREST · Storage"]
-        TelT[("telemetry_events")]
     end
 
     VM -->|"calls"| RepoI
     RepoI -.->|"Flow of models"| VM
-    RepoI -.->|"Hilt injects"| Deco
-    Deco -->|"delegates and measures"| Impl
+    RepoI -.->|"Hilt injects"| Impl
     Impl --> Strat
     Impl --> Mapper
     Strat --> DAO
@@ -226,25 +209,19 @@ flowchart TB
     Remote --> DTO
     Remote --> API
 
-    Deco -->|"RequestTimed"| Bus
-    Impl -->|"QuestCompleted, BadgeUnlocked…"| Bus
-    Conn -->|"ConnectivityChanged"| Bus
-    Bus --> Tel
+    Impl -->|"QuestCompleted"| Bus
     Bus --> Inv
     Bus -->|"domain events"| VM
-    Inv -->|"refreshes"| Impl
-    Tel -->|"buffer"| Room
-    Tel -->|"batch upload"| TelT
+    Inv -->|"refreshes"| Profile["ProfileRepository"]
 ```
 
 **Rationale:** Each component has one job, so a change in one place does not spread.
 
-- **Repository interface:** ViewModels depend on `QuestRepository`, not on its implementation. Tests replace it with a fake, and Hilt can hand out a decorated version without the ViewModel noticing.
+- **Repository interface:** ViewModels depend on `QuestRepository`, not on its implementation. Tests replace it with a fake, and Hilt hands out the implementation without the ViewModel noticing.
 - **Remote data source:** it is the only place that imports `supabase-kt`. If the SDK or an endpoint changes, only this class changes.
 - **DTOs and mappers:** DTOs copy the backend's JSON exactly. Mappers translate them to Room entities and to domain models. A renamed column is fixed in one mapper instead of in every screen.
 - **Room as the single source of truth:** reads always come from Room. The network only refreshes Room. This gives one code path for online and offline, and the UI updates by itself when the cache changes.
-- **Decorator for telemetry:** only quests have business-question metrics (BQ1, BQ2), so only `QuestRepository` is wrapped. The real repository has no timing code.
-- **Event bus:** refreshing the profile after a quest and saving telemetry are side effects. They live in subscribers, so the quest repository does not need to know about profiles or telemetry.
+- **Event bus:** refreshing the profile after a quest is a side effect. It lives in a subscriber, so the quest repository does not need to know about profiles.
 
 ## Architecture Design - Component Interaction and Communication
 | Pattern / style | Where | Why |
@@ -255,11 +232,10 @@ flowchart TB
 | **DAO** | `data/local/dao/` | All local SQL lives in Room DAOs. Queries return `Flow`, and multi-step writes use `@Transaction`. |
 | **Mapper (Adapter)** | `data/mapper/` | Converts DTO → Entity → domain model. If a column changes, only the mapper changes. |
 | **Facade** | `data/remote/datasource/*RemoteDataSource` | Hides the `supabase-kt` query builder behind simple methods such as `nearbyQuests(lat, lng, radius)`. Only these classes import Supabase. |
+| **Adapter** | `ui/components/map/`, `core/location/` | `WandrMap` and `LocationProvider` are the interfaces the app expects. `GoogleMapAdapter` and `FusedLocationProvider` translate them to the Google SDKs, so changing the map provider does not touch any screen. |
 | **Strategy** | `core/strategy/` | `NetworkFirst`, `CacheFirst` and `CacheOnly` are interchangeable. `StrategySelector` switches to `CacheOnly` when there is no connection. Repositories do not repeat this logic. |
-| **Decorator** | `data/repository/TelemetryQuestRepository.kt` | Wraps the real `QuestRepository` (`by inner`) and measures BQ1 (`nearbyQuests`) and BQ2 (`completeObjective`) without touching its code. Hilt hands out the decorated instance (`RepositoryModule`). |
 | **Observer** | Room `Flow` → Repository → ViewModel | When Room changes, every screen that shows that data updates automatically. |
-| **Observer (BQ8 funnel)** | `core/analytics/QuestFunnelTracker.kt` | Subscribes to `QuestViewed`, `QuestStarted`, `NavigationStarted`, `QuestCompleted` and `QuestAbandoned` and records each one as a funnel row in `telemetry_events`. The screens and the repository only publish; they do not know the tracker exists. |
-| **Event-based** | `core/event/AppEventBus.kt` | Publishers (repositories, the Decorator, connectivity) and subscribers (`TelemetryCollector`, `CacheInvalidator`, ViewModels) do not know each other. |
+| **Event-based** | `core/event/AppEventBus.kt` | Publishers (`QuestRepositoryImpl`, `AuthRepository`, `SessionViewModel`) and subscribers (`CacheInvalidator`, `ProfileViewModel`) do not know each other. |
 | **Singleton + Dependency Injection** | `core/di/` (Hilt) | One `SupabaseClient` (one session) and one `WandrDatabase` for the whole app. Tests pass in fakes. |
 | **Layers + single source of truth** | Remote → Room → Repository | Reads always come from Room, so the app shows saved data offline (QS1) and keeps quest progress (QS8). |
 
@@ -274,17 +250,14 @@ sequenceDiagram
         participant VM as HomeViewModel
     end
     box Model
-        participant D as TelemetryQuestRepository
         participant R as QuestRepositoryImpl
         participant S as FetchStrategy
         participant DB as Room
     end
     participant API as Supabase
-    participant Bus as AppEventBus
 
     UI->>VM: observes uiState
-    VM->>D: nearbyQuests(location)
-    D->>R: nearbyQuests(location)
+    VM->>R: nearbyQuests(location)
     R->>S: select(policy).fetch(local, refresh)
     alt online (NetworkFirst)
         S->>API: nearby_quests RPC + quest_tags
@@ -295,15 +268,12 @@ sequenceDiagram
     end
     DB-->>VM: Flow of quests (isStale = true when offline)
     VM-->>UI: new UiState
-    D->>Bus: RequestTimed(quest_recommendations_load)
-    Bus->>Bus: TelemetryCollector saves it, uploads a batch later
 ```
 
-**Rationale:** This flow answers two quality scenarios and one business question at once.
+**Rationale:** This flow answers one quality scenario.
 
 - **Offline (QS1):** the `StrategySelector` picks `CacheOnly` when there is no connection. The ViewModel receives the saved quests with `isStale = true` and the screen shows "No internet connection. Showing saved activities".
 - **Reactive UI:** the ViewModel does not ask "did it finish?". It observes a `Flow` from Room, so any later change in the cache reaches the screen without extra code.
-- **BQ1 (response time of recommendations):** the Decorator measures the time until the first real answer and publishes it as an event. The measurement does not slow down the request, because saving it happens in a subscriber.
 
 ### Diagram 5: Writing data (checking a quest step)
 
@@ -318,7 +288,6 @@ sequenceDiagram
     end
     box Model
         participant St as StorageRepository
-        participant D as TelemetryQuestRepository
         participant R as QuestRepositoryImpl
         participant DB as Room
     end
@@ -329,22 +298,19 @@ sequenceDiagram
     UI->>VM: completeObjective(quest, step, photo)
     VM->>St: uploadQuestPhoto() (only if the step needs a photo)
     St->>API: Storage upload to quest-photos/<user>/<quest>/<step>.jpg
-    VM->>D: completeObjective(quest, step, photoPath)
-    D->>R: completeObjective(...)
+    VM->>R: completeObjective(quest, step, photoPath)
     R->>API: complete_objective RPC
     API-->>R: progress, XP, level, new badges
     R->>API: download active quests
     R->>DB: replaceActive()
-    R->>Bus: ObjectiveCompleted
     opt it was the last step
-        R->>Bus: QuestCompleted, BadgeUnlocked
+        R->>Bus: QuestCompleted
         Bus->>Inv: QuestCompleted
         Inv->>API: download profile, badges, history
         Inv->>DB: update cache
         DB-->>P: Flow emits the new XP and badges
         Bus->>P: QuestCompleted (show celebration)
     end
-    D->>Bus: RequestTimed(quest_step_response)
     R-->>VM: Result‹ObjectiveResult›
     VM-->>UI: new UiState (progress, XP, badges)
 ```
@@ -352,9 +318,8 @@ sequenceDiagram
 **Rationale:**
 
 - **Rules on the server:** XP, level, streak and badges are computed inside the `complete_objective` RPC. The app cannot grant itself XP, even if it is modified, because the database rejects direct writes to those columns.
-- **Writes return a `Result`:** every failure is mapped to a readable `AppError`. Backend messages such as "This event is full" reach the user as they are. Writes need a connection. Offline, they fail with "No internet connection".
+- **Writes return a `Result`:** every failure is mapped to a readable `AppError`. Backend messages such as "Quest is not in progress" reach the user as they are. Writes need a connection. Offline, they fail with "No internet connection".
 - **Decoupled side effects:** the quest repository only publishes `QuestCompleted`. The `CacheInvalidator` refreshes the profile, and `ProfileViewModel` updates because it observes Room. No component calls another feature directly.
-- **BQ2 (slowest quest step):** the Decorator measures each `completeObjective` call with the quest and step ids.
 
 ### Diagram 6: Event-based communication
 
@@ -362,41 +327,29 @@ sequenceDiagram
 flowchart LR
     subgraph PUB["Publishers"]
         QR["QuestRepositoryImpl"]
-        DEC["TelemetryQuestRepository"]
         AR["AuthRepository"]
-        ER["EventRepository"]
-        FR["FriendRepository"]
-        CO["ConnectivityObserver"]
+        SVM["SessionViewModel"]
     end
 
     Bus(["AppEventBus<br/>SharedFlow‹AppEvent›"])
 
     subgraph SUB["Subscribers"]
-        TC["TelemetryCollector<br/>saves RequestTimed, uploads batches"]
         CI["CacheInvalidator<br/>refreshes profile, clears cache on sign out"]
-        HVM["HomeViewModel<br/>reloads when the connection returns"]
         PVM["ProfileViewModel<br/>shows the celebration"]
-        FVM["FriendsViewModel<br/>reloads the list"]
     end
 
-    QR -->|"QuestStarted, ObjectiveCompleted,<br/>QuestCompleted, BadgeUnlocked"| Bus
-    DEC -->|"RequestTimed"| Bus
-    AR -->|"SignedIn, SignedOut"| Bus
-    ER -->|"EventJoined, EventLeft"| Bus
-    FR -->|"FriendshipsChanged"| Bus
-    CO -->|"ConnectivityChanged"| Bus
+    QR -->|"QuestCompleted"| Bus
+    AR -->|"SignedOut"| Bus
+    SVM -->|"SignedOut"| Bus
 
-    Bus --> TC
     Bus --> CI
-    Bus --> HVM
     Bus --> PVM
-    Bus --> FVM
 ```
 
 **Rationale:** Some things must happen "whenever X happens", wherever X comes from. A direct call would force every publisher to know every interested component.
 
-- **Loose coupling:** a publisher does not know who listens. Adding a new reaction, for example a push notification when a badge is unlocked, means adding one subscriber and changing no existing code.
-- **App-wide subscribers:** `TelemetryCollector` and `CacheInvalidator` start in `WandrApplication` and live as long as the app. Telemetry is not lost when the user leaves a screen.
+- **Loose coupling:** a publisher does not know who listens. Adding a new reaction, for example a push notification when a quest is completed, means adding one subscriber and changing no existing code.
+- **App-wide subscriber:** `CacheInvalidator` starts in `WandrApplication` and lives as long as the app.
 - **Limit of the bus:** it is only used for notifications. Data still travels through repositories and Room, so there is always one place to read the current state.
 
 ## Design Patterns and Tactics
@@ -413,7 +366,6 @@ flowchart LR
 | **Adapter** | `ui/components/map/`, `core/location/` | `WandrMap` and `LocationProvider` are the interfaces the app expects. `GoogleMapAdapter` and `FusedLocationProvider` translate them to the Google SDKs, so changing the map provider does not touch any screen. |
 | **Facade** | `data/remote/datasource/` | Hides the `supabase-kt` query builder behind simple methods such as `nearbyQuests(lat, lng, radius)`. |
 | **Strategy** | `core/strategy/` | `NetworkFirst`, `CacheFirst` and `CacheOnly` are interchangeable. `StrategySelector` picks one for each request. |
-| **Decorator** | `data/repository/TelemetryQuestRepository.kt` | Adds measurement (BQ1, BQ2) around the real repository without changing it. |
 | **Observer** | Room `Flow` → Repository → ViewModel → Compose | When data changes, every screen that shows it updates automatically. |
 | **Publish-subscribe** | `core/event/AppEventBus.kt` | Publishers and subscribers do not know each other. |
 | **Singleton + Dependency Injection** | `core/di/` (Hilt) | One `SupabaseClient` (one session) and one database for the whole app. Tests pass in fakes. |
@@ -426,10 +378,8 @@ flowchart LR
 | Availability | Detect the fault: observe connectivity and switch strategy before calling the network | `ConnectivityObserver`, `StrategySelector` | QS1 |
 | Availability | Degraded mode for location: current fix → last known → center of Bogotá | `LocationProvider` | QS11 |
 | Reliability | Persist state: quest progress is saved in Room after every step | `QuestDao` | QS8 |
-| Performance | Batch requests: telemetry is sent in groups of 20, or when the app goes to the background | `TelemetryCollector` | BQ1, BQ2 |
-| Performance | Reduce requests: tags use `CacheFirst`, and the user search waits 300 ms after the last keystroke | `TagRepository`, `FriendsViewModel` | QS2, QS7 |
+| Performance | Reduce requests: Quest Details reads the active quests from the cache first (`CacheFirst`) | `QuestDetailViewModel`, `CacheFirst` | - |
 | Energy | Location updates only after moving 50 m | `LocationProvider` | QS5 |
-| Energy | Poll friends' positions only while the screen is visible | `FriendsMapViewModel` | QS5 |
 | Security | Authorize on the server: row-level security and RPC functions; the app only holds a publishable key | Supabase | QS6 |
 | Security | Limit exposure: the cache is cleared on sign out; photos go to a private bucket, in a per-user folder | `CacheInvalidator`, `storage.sql` | QS6 |
 | Testability | Depend on interfaces and inject fakes | Repositories, Hilt | - |
@@ -438,13 +388,11 @@ flowchart LR
 **Rationale:** The patterns and tactics were chosen from the quality scenarios and business questions of Sprint 1, not for their own sake.
 
 - **Offline and persistence (QS1, QS8)** drive the largest decisions: Room as the single source of truth, the Strategy pattern to choose between cache and network, and the Observer pattern so the UI follows the cache.
-- **Business questions BQ1 and BQ2** need response times. The Decorator measures them, the event bus carries them and the collector batches them, so measuring does not slow the user down or drain the battery.
 - **Modifiability** matters because the backend is still changing. DTOs, mappers and facades confine a backend change to the data layer.
 - **Security** is enforced by the backend. The app is treated as untrusted: it can only do what row-level security and the RPC functions allow.
 
-Two limits of the current design:
+One limit of the current design:
 - **Writes need a connection.** Completing a step offline fails with a message; it is not queued and retried. Scenario QS10 (eventual connectivity) is not covered yet.
-- **Friends, notifications and the friends map are not cached**, because they are live data.
 
 ## Appendix
 
@@ -452,26 +400,25 @@ Two limits of the current design:
 
 ```
 com.kotlin.wandr
-├── WandrApplication.kt      Starts the event bus subscribers
+├── WandrApplication.kt      Starts the event bus subscriber
 ├── core/
 │   ├── di/                  Hilt modules (Supabase, Room, repositories, device services)
 │   ├── error/               AppError, ErrorMapper, safeCall
 │   ├── event/               AppEvent, AppEventBus, CacheInvalidator
 │   ├── location/            LocationProvider
 │   ├── network/             ConnectivityObserver
-│   ├── strategy/            FetchStrategy, StrategySelector, Resource
-│   └── telemetry/           TelemetryCollector, event names
+│   └── strategy/            FetchStrategy, StrategySelector, Resource
 ├── data/
 │   ├── local/               WandrDatabase, dao/, entity/
 │   ├── mapper/
 │   ├── remote/              dto/, datasource/
-│   └── repository/          Interfaces + implementations + Decorator
+│   └── repository/          Interfaces + implementations
 ├── domain/model/            Models used by the ViewModels and the UI
 └── ui/
     ├── theme/               Design tokens (see DESIGN_SYSTEM.md)
-    ├── components/          Reusable composables
+    ├── components/          Reusable composables, including map/ (WandrMap, GoogleMapAdapter)
     ├── navigation/          Navigation graph
-    └── feature/             auth, onboarding, home, quest, map, events, friends, notifications, profile
+    └── feature/             session, auth, home, events (Explore), map, quest, analytics, profile
 ```
 
 ## ViewModel per screen
@@ -479,19 +426,15 @@ com.kotlin.wandr
 | Screen | ViewModel | Repositories |
 | --- | --- | --- |
 | Splash / session gate | `SessionViewModel` + `SplashScreen` | Auth (`sessionState`) |
-| Log in | `LoginViewModel` | Auth, Profile, Tag |
+| Log in | `LoginViewModel` | Auth |
 | Sign up | `SignUpViewModel` | Auth |
-| Onboarding | `OnboardingViewModel` | Tag, Profile |
-| Discovery Engine | `HomeViewModel` | Quest, Tag + LocationProvider |
-| Quest Details | `QuestDetailViewModel` + `QuestDetailScreen` | Quest (publishes `QuestViewed`) |
-| Active Quest / Navigation | `ActiveQuestViewModel` + `ActiveQuestScreen` | Quest, Storage (publishes `NavigationStarted`) |
-| My Quests (in progress) | `ActiveQuestViewModel` + `ActiveQuestsScreen` | Quest |
+| Home (Discovery Engine) | `HomeViewModel` | Quest + LocationProvider |
+| Explore | `ExploreViewModel` | Event, Quest + LocationProvider |
+| Map | `MapViewModel` | Quest, Place + LocationProvider |
+| Quest Details | `QuestDetailViewModel` + `QuestDetailScreen` | Quest |
+| Active Quest / Navigation | `ActiveQuestViewModel` + `ActiveQuestScreen` | Quest, Storage, Analytics + LocationProvider |
+| My Quests (Saved tab) | `ActiveQuestViewModel` + `ActiveQuestsScreen` | Quest |
 | Abandonment Funnel (BQ8, internal, debug builds only) | `QuestDropoffViewModel` + `QuestDropoffScreen` | Analytics (`get_quest_dropoff` RPC) |
-| Map | `MapViewModel` | Place + LocationProvider |
-| Friends on Quest | `FriendsMapViewModel` | Location + LocationProvider |
-| Events | `EventsViewModel` | Event |
-| Friends | `FriendsViewModel` | Friend |
-| Notifications | `NotificationsViewModel` | Notification |
 | Profile / Side Quests | `ProfileViewModel` + `ProfileScreen` | Profile (+ `get_streak_summary` RPC for BQ4), Auth |
 
 Every `UiState` has an `errorMessage` that is ready to show, plus an `onErrorShown()` function. Screens that can show cached data also have `isShowingSavedData`.
@@ -502,30 +445,23 @@ Every `UiState` has an `errorMessage` that is ready to show, plus an `onErrorSho
 
 ```mermaid
 flowchart LR
-    subgraph PUB["Publishers"]
-        QD["QuestDetailViewModel<br/>QuestViewed"]
-        AQ["ActiveQuestViewModel<br/>NavigationStarted"]
-        QR["QuestRepository<br/>QuestStarted · QuestCompleted · QuestAbandoned"]
-    end
-    Bus["AppEventBus"]
-    Tracker["QuestFunnelTracker<br/>(Observer)"]
-    Col["TelemetryCollector<br/>Room buffer + batches"]
-    Tel[("telemetry_events<br/>quest_viewed … quest_abandoned")]
+    QR["QuestRepository<br/>abandon_quest keeps the checked steps"]
     QC[("quest_completions +<br/>quest_objective_completions")]
     RPC["RPC get_quest_dropoff"]
+    AR["AnalyticsRepository"]
     Screen["QuestDropoffScreen<br/>Abandonment funnel"]
+    Hint["ActiveQuestScreen<br/>drop-off hint"]
 
-    QD & AQ & QR --> Bus --> Tracker -->|"RequestTimed"| Bus --> Col --> Tel
-    QR -->|"abandon_quest keeps the checked steps"| QC --> RPC --> Screen
+    QR --> QC --> RPC --> AR
+    AR --> Screen
+    AR --> Hint
 ```
 
 - **Answer (for the team):** `get_quest_dropoff()` reads every abandoned quest and the last step that was checked, and the
   Abandonment Funnel screen shows the quest + step with most abandons and the totals per step. BQ8 is Type 3 (features
   analysis), so this screen is an internal tool: it is only reachable from Profile in **debug builds**.
-- **For the user:** the same data powers the drop-off hint in Active Quest (smart feature).
-- **Funnel events:** `quest_viewed → quest_accepted → navigation_started → quest_completed / quest_abandoned` go to
-  `telemetry_events` with `duration_ms` = time since the previous step. They also show the drop-off *before* a quest
-  is started (viewed but never accepted). The SQL is in `telemetry.sql` of the backend repo.
+- **For the user:** the same data powers the drop-off hint in Active Quest (smart feature). A failure is silent: no data or no
+  connection simply means no hint.
 - **Progress persistence:** active quests and checked steps live in Room (`activeQuests`), so the tracker keeps the
   progress offline and after the app is closed.
 

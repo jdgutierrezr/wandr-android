@@ -6,9 +6,7 @@ Wandr's own design system is built on Material 3 and styled after the "Fluent gr
 
 Screens combine these components. They should not style Material widgets directly.
 
-To see everything in one place:
-- **In Android Studio:** open `ui/catalog/ComponentCatalog.kt` and use the *Split* / *Design* view.
-- **In the app (debug builds):** on the Login screen, tap **Design system (debug)**.
+Components with a `@Preview` (for example the buttons and the text fields) can be seen in Android Studio's *Split* / *Design* view.
 
 ## Tokens
 
@@ -31,16 +29,15 @@ Rules:
 | --- | --- | --- |
 | `WandrCard`, `IconCircle` | `WandrCard.kt` | Every card, icon circles |
 | `PrimaryButton`, `SecondaryButton`, `DangerButton`, `LinkButton` | `WandrButtons.kt` | "Accept Quest", "Give me another one", "Need Help / SOS", "Skip for now" |
-| `WandrTextField`, `PasswordTextField`, `SearchField` | `WandrTextFields.kt` | Login, search on the Discovery Map |
+| `WandrTextField`, `PasswordTextField` | `WandrTextFields.kt` | Login and Sign up |
 | `StatusBadge`, `XpBadge`, `WandrChip` | `Badges.kt` | "Completed", "+50 XP", category and interest filters |
 | `SectionLabel`, `SectionHeader` | `SectionHeader.kt` | "OBJECTIVES", "Achievements 2/8 … View All" |
-| `Avatar`, `AvatarStack` | `Avatar.kt` | Friends on Quest, "+12 joined" |
-| `WandrTopBar`, `NotificationsAction`, `WandrBottomBar` | `Bars.kt` | Top bar with streak, bottom bar (Map, Friends, Events, Leaderboard, Profile) |
+| `Avatar` | `Avatar.kt` | User photo or initials |
+| `WandrTopBar`, `WandrBottomBar`, `MainTab` | `Bars.kt` | Top bar with streak, bottom bar (Home, Explore, Map, Saved, Profile) |
 | `QuestCard`, `QuestRow`, `ObjectiveItem`, `RewardRow`, `CoverImage`, `MetaText` | `QuestComponents.kt` | Upcoming Quests, map card, Quest Objectives, Rewards |
 | `StatCard`, `MilestoneCard`, `WandrProgressBar`, `AchievementCard` | `ProgressComponents.kt` | Side Quests (profile) |
 | `WeekDaysRow`, `WeeklyQuestsChart`, `WeekComparisonMessage` | `StreakComponents.kt` | Profile: this week's active days, quests per week and the comparison with last week (BQ4) |
 | `DropoffBars`, `DropoffBar` | `DropoffComponents.kt` | Abandonment funnel: abandons per step (BQ8) |
-| `SelectableCard`, `ToggleRow` | `SelectionComponents.kt` | Relaxed / Active, "Broadcasting location" |
 | `AuthLayout` | `AuthLayout.kt` | Login and Sign up frame |
 
 ## Adding a component
@@ -50,5 +47,5 @@ Rules:
    - **Stateless:** the data comes in as parameters and events go out as lambdas.
    - **`modifier: Modifier = Modifier`:** it is the first optional parameter.
    - **Tokens only:** use `MaterialTheme` / `WandrTheme` values, no loose colors or sizes.
-3. Add it to `ComponentCatalog.kt` so the team can see it.
+3. Add a `@Preview` so the team can see it.
 4. Add it to the table above.
