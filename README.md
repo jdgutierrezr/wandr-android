@@ -43,7 +43,7 @@ app/src/main/
 │   ├── core/                Cross-cutting code: DI, events, errors, strategies, location, telemetry
 │   ├── data/                DTOs, Supabase data sources, Room, mappers, repositories
 │   ├── domain/model/        Models used by the ViewModels and the UI
-│   └── ui/                  Theme and one ViewModel per screen
+│   └── ui/                  Theme, reusable components, navigation and one ViewModel per screen
 ├── res/                     Resources (images, fonts, strings, icons)
 └── AndroidManifest.xml      App configuration and permissions
 app/schemas/                 Room schema history (generated, keep it in git)
@@ -72,6 +72,6 @@ In Supabase Auth, **Confirm email** must be off. Otherwise, sign up cannot creat
 
 | Command | What it runs |
 | --- | --- |
-| `./gradlew testDebugUnitTest` | Unit tests: strategies, mappers, the telemetry decorator, the event bus and every ViewModel |
+| `./gradlew testDebugUnitTest` | Unit tests: strategies, mappers, the event bus and the ViewModels |
 | `WANDR_SUPABASE_SMOKE=1 ./gradlew testDebugUnitTest --tests "*SupabaseReadOnlySmokeTest*"` | Decodes real Supabase responses with a test user. Read only |
 | `./gradlew connectedDebugAndroidTest` | Room DAO tests and `SupabaseIntegrationTest`. **The integration test changes data**, so reset the database afterwards |

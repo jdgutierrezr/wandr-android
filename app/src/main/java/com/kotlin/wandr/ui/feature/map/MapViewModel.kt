@@ -25,17 +25,13 @@ import javax.inject.Inject
 data class MapUiState(
     val isLoading: Boolean = true,
     val userLocation: UserLocation? = null,
-    /** Closest first, each with its distance. */
     val quests: List<Quest> = emptyList(),
-    /** One pin per quest. */
     val markers: List<MapMarker> = emptyList(),
     val radiusKm: Double = QuestRepository.DEFAULT_RADIUS_KM,
-    /** Offline: show "No internet connection. Showing saved quests" (QS1). */
     val isShowingSavedData: Boolean = false,
     val errorMessage: String? = null,
 )
 
-/** Map: quests around the user, filtered by radius. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -57,7 +53,6 @@ class MapViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = true) }
                 val location = locationProvider.currentLocation()
                 _uiState.update { it.copy(userLocation = location) }
-                // The places are only needed for their coordinates, so a failure there just means no pins
                 combine(
                     questRepository.nearbyQuests(location.point, q.radiusKm),
                     placeRepository.nearbyPlaces(location.point, q.radiusKm),
@@ -85,12 +80,10 @@ class MapViewModel @Inject constructor(
         query.update { it.copy(radiusKm = radiusKm) }
     }
 
-    /** Also re-reads the location (e.g. after the user grants the permission). */
     fun refresh() = query.update { it.copy(tick = it.tick + 1) }
 
     fun onErrorShown() = _uiState.update { it.copy(errorMessage = null) }
 
-    /** `nearby_quests` does not return coordinates, so each quest is pinned on its place. */
     private fun markersFor(quests: List<Quest>, places: List<Place>): List<MapMarker> {
         val placesById = places.associateBy { it.id }
         return quests.mapNotNull { quest ->

@@ -27,7 +27,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.log2
 
-/** [WandrMap] drawn with Google Maps. The only file that knows the Google Maps SDK. */
 @Singleton
 class GoogleMapAdapter @Inject constructor() : WandrMap {
 
@@ -45,7 +44,6 @@ class GoogleMapAdapter @Inject constructor() : WandrMap {
         val cameraPositionState = rememberCameraPositionState {
             position = CameraPosition.fromLatLngZoom(target, zoom)
         }
-        // Follow the user and the radius filter
         LaunchedEffect(target, zoom) {
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, zoom))
         }
@@ -54,7 +52,7 @@ class GoogleMapAdapter @Inject constructor() : WandrMap {
         GoogleMap(modifier = modifier, cameraPositionState = cameraPositionState) {
             Circle(
                 center = target,
-                radius = radiusKm * 1000, // meters
+                radius = radiusKm * 1000,
                 fillColor = radiusColor.copy(alpha = 0.08f),
                 strokeColor = radiusColor,
                 strokeWidth = 2f,
@@ -68,7 +66,7 @@ class GoogleMapAdapter @Inject constructor() : WandrMap {
                         snippet = marker.subtitle,
                         onClick = {
                             onMarkerClick(marker)
-                            false // Not consumed: the map still shows the title bubble
+                            false
                         },
                     )
                 }
@@ -95,7 +93,6 @@ class GoogleMapAdapter @Inject constructor() : WandrMap {
 
     private fun GeoPoint.toLatLng() = LatLng(latitude, longitude)
 
-    /** Zoom that fits the whole radius on a phone: 1 km ≈ 14.3, and one level less each time it doubles. */
     private fun zoomFor(radiusKm: Double): Float = (14.3 - log2(radiusKm)).toFloat()
 
     private companion object {

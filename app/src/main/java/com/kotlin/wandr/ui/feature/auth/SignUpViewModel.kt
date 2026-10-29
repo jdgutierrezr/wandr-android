@@ -18,8 +18,7 @@ data class SignUpUiState(
     val password: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    /** A new account always goes through onboarding. */
-    val destination: AfterAuthDestination? = null,
+    val isSignedUp: Boolean = false,
 )
 
 @HiltViewModel
@@ -49,7 +48,7 @@ class SignUpViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.signUp(state.name, state.email, state.password)
                 .onSuccess {
-                    _uiState.update { it.copy(isLoading = false, destination = AfterAuthDestination.ONBOARDING) }
+                    _uiState.update { it.copy(isLoading = false, isSignedUp = true) }
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false, errorMessage = error.appError.message) }
@@ -65,7 +64,6 @@ class SignUpViewModel @Inject constructor(
     }
 
     private companion object {
-        /** Supabase Auth's default minimum. */
         const val MIN_PASSWORD_LENGTH = 6
         val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }

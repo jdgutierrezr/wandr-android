@@ -4,13 +4,9 @@ import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.AuthRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.EventRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.FriendRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.LocationRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.NotificationRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.PlaceRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.ProfileRemoteDataSource
 import com.kotlin.wandr.data.remote.datasource.QuestRemoteDataSource
-import com.kotlin.wandr.data.remote.datasource.TagRemoteDataSource
 import com.kotlin.wandr.data.mapper.toDomain
 import com.kotlin.wandr.data.mapper.toEntity
 import com.kotlin.wandr.data.mapper.toRows
@@ -29,19 +25,12 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.time.Instant
 
-/**
- * Decodes real Supabase responses with our DTOs and mappers. **Read only**: it never changes data.
- *
- * Skipped by default. Run it with:
- *   WANDR_SUPABASE_SMOKE=1 ./gradlew testDebugUnitTest --tests "*SupabaseReadOnlySmokeTest*"
- */
 class SupabaseReadOnlySmokeTest {
 
     @Test
     fun readEndpointsDecodeWithTestUser() = runBlocking {
         assumeTrue("Set WANDR_SUPABASE_SMOKE=1 to run", System.getenv("WANDR_SUPABASE_SMOKE") == "1")
 
-        // Plain JVM: keep the session in memory instead of Android storage
         val supabase = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY) {
             defaultSerializer = KotlinXSerializer(Json { ignoreUnknownKeys = true })
             install(Auth) {
@@ -70,10 +59,6 @@ class SupabaseReadOnlySmokeTest {
         assertEquals(me.currentXp, streak.points)
         assertEquals(me.currentStreak, streak.currentStreak)
 
-        val tags = TagRemoteDataSource(supabase)
-        println("tags: " + tags.fetchTags().map { it.name })
-        println("interests: " + tags.fetchInterestIds())
-
         val quests = QuestRemoteDataSource(supabase)
         val nearby = quests.nearbyQuests(4.6097, -74.0817, 15.0)
         println("nearby quests: " + nearby.map { "${it.title} (${it.distanceKm} km)" })
@@ -97,12 +82,5 @@ class SupabaseReadOnlySmokeTest {
         val events = EventRemoteDataSource(supabase)
         val mine = events.myEventIds()
         println("events: " + events.upcomingEvents(Instant.now()).map { it.toEntity(it.id in mine).toDomain() })
-
-        val friends = FriendRemoteDataSource(supabase)
-        println("friendships: " + friends.friendships().map { it.toDomain(friends.userId()) })
-        println("search 'san': " + friends.searchUsers("san").map { it.name })
-
-        println("notifications: " + NotificationRemoteDataSource(supabase).notifications().map { it.toDomain() })
-        println("friends on map: " + LocationRemoteDataSource(supabase).friendsOnMap().map { it.toDomain() })
     }
 }

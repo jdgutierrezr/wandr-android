@@ -16,13 +16,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface QuestDao {
 
-    // ---------- Nearby quests ----------
-
     @Transaction
     @Query("SELECT * FROM quests WHERE distanceKm IS NOT NULL AND distanceKm <= :radiusKm ORDER BY distanceKm")
     fun observeNearby(radiusKm: Double): Flow<List<QuestWithTags>>
 
-    /** Replaces the last nearby result: old distances are cleared so they no longer show up. */
     @Transaction
     suspend fun replaceNearby(quests: List<QuestEntity>, tags: List<QuestTagEntity>) {
         clearDistances()
@@ -33,8 +30,6 @@ interface QuestDao {
 
     @Query("UPDATE quests SET distanceKm = NULL")
     suspend fun clearDistances()
-
-    // ---------- Quest detail ----------
 
     @Transaction
     @Query("SELECT * FROM quests WHERE id = :questId")
@@ -54,8 +49,6 @@ interface QuestDao {
         deleteObjectivesFor(quest.id)
         upsertObjectives(objectives)
     }
-
-    // ---------- Active quests and history ----------
 
     @Transaction
     @Query("SELECT * FROM quest_completions WHERE status = 'pending' ORDER BY startedAtMillis DESC")
@@ -94,8 +87,6 @@ interface QuestDao {
 
     @Query("DELETE FROM quest_completions WHERE status = :status")
     suspend fun deleteCompletionRows(status: String)
-
-    // ---------- Building blocks ----------
 
     @Upsert
     suspend fun upsertQuests(quests: List<QuestEntity>)

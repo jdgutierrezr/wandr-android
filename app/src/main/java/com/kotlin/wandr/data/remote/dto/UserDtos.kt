@@ -3,7 +3,6 @@ package com.kotlin.wandr.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Row of `users`. */
 @Serializable
 data class UserDto(
     val id: String,
@@ -17,32 +16,11 @@ data class UserDto(
     @SerialName("energy_level") val energyLevel: String? = null,
 )
 
-/** Body of `POST users` right after sign up. Only these columns can be inserted by the app. */
 @Serializable
 data class NewUserDto(
     val id: String,
     val name: String,
     val email: String,
-)
-
-@Serializable
-data class UserSummaryDto(
-    val id: String,
-    val name: String,
-    @SerialName("profile_picture") val profilePicture: String? = null,
-)
-
-@Serializable
-data class TagDto(
-    val id: String,
-    val name: String,
-)
-
-/** Row of `user_interests`. */
-@Serializable
-data class UserInterestDto(
-    @SerialName("user_id") val userId: String,
-    @SerialName("tag_id") val tagId: String,
 )
 
 @Serializable
@@ -53,14 +31,12 @@ data class BadgeDto(
     @SerialName("icon_url") val iconUrl: String? = null,
 )
 
-/** `user_badges?select=earned_at,badges(*)` */
 @Serializable
 data class UserBadgeDto(
     @SerialName("earned_at") val earnedAt: String,
     val badges: BadgeDto,
 )
 
-/** `quest_completions?status=eq.completed&select=id,quest_id,completed_at,quests(title,points_reward)` */
 @Serializable
 data class QuestHistoryDto(
     val id: String,

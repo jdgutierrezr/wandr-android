@@ -159,10 +159,7 @@ fun ActiveQuestRoute(
             }
         },
         onNavigate = { place ->
-            // Only a real navigation counts for the BQ8 funnel
-            if (context.openDirections(place)) {
-                viewModel.startNavigation(questId)
-            } else {
+            if (!context.openDirections(place)) {
                 scope.launch { snackbarHostState.showSnackbar("No maps app found on this phone") }
             }
         },

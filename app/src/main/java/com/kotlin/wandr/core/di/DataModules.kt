@@ -3,7 +3,6 @@ package com.kotlin.wandr.core.di
 import android.content.Context
 import androidx.room.Room
 import com.kotlin.wandr.BuildConfig
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.data.local.WandrDatabase
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.AnalyticsRepositoryImpl
@@ -11,12 +10,6 @@ import com.kotlin.wandr.data.repository.AuthRepository
 import com.kotlin.wandr.data.repository.AuthRepositoryImpl
 import com.kotlin.wandr.data.repository.EventRepository
 import com.kotlin.wandr.data.repository.EventRepositoryImpl
-import com.kotlin.wandr.data.repository.FriendRepository
-import com.kotlin.wandr.data.repository.FriendRepositoryImpl
-import com.kotlin.wandr.data.repository.LocationRepository
-import com.kotlin.wandr.data.repository.LocationRepositoryImpl
-import com.kotlin.wandr.data.repository.NotificationRepository
-import com.kotlin.wandr.data.repository.NotificationRepositoryImpl
 import com.kotlin.wandr.data.repository.PlaceRepository
 import com.kotlin.wandr.data.repository.PlaceRepositoryImpl
 import com.kotlin.wandr.data.repository.ProfileRepository
@@ -25,11 +18,6 @@ import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.QuestRepositoryImpl
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.StorageRepositoryImpl
-import com.kotlin.wandr.data.repository.TagRepository
-import com.kotlin.wandr.data.repository.TagRepositoryImpl
-import com.kotlin.wandr.data.repository.TelemetryQuestRepository
-import com.kotlin.wandr.data.repository.TelemetryRepository
-import com.kotlin.wandr.data.repository.TelemetryRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -49,7 +37,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object SupabaseModule {
 
-    /** Singleton: one client (and one session) for the whole app. */
     @Provides
     @Singleton
     fun provideSupabaseClient(): SupabaseClient = createSupabaseClient(
@@ -71,16 +58,13 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WandrDatabase =
         Room.databaseBuilder(context, WandrDatabase::class.java, WandrDatabase.NAME)
-            // It is only a cache: if the schema changes, rebuilding it is enough
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides fun provideProfileDao(db: WandrDatabase) = db.profileDao()
-    @Provides fun provideTagDao(db: WandrDatabase) = db.tagDao()
     @Provides fun provideQuestDao(db: WandrDatabase) = db.questDao()
     @Provides fun providePlaceDao(db: WandrDatabase) = db.placeDao()
     @Provides fun provideEventDao(db: WandrDatabase) = db.eventDao()
-    @Provides fun provideTelemetryDao(db: WandrDatabase) = db.telemetryDao()
 }
 
 @Module
@@ -89,21 +73,9 @@ abstract class RepositoryModule {
 
     @Binds abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
     @Binds abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
-    @Binds abstract fun bindTagRepository(impl: TagRepositoryImpl): TagRepository
     @Binds abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
     @Binds abstract fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
-    @Binds abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
-    @Binds abstract fun bindFriendRepository(impl: FriendRepositoryImpl): FriendRepository
-    @Binds abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
-    @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
-
-    companion object {
-        /** Decorator: whoever asks for a [QuestRepository] gets the measured one. */
-        @Provides
-        @Singleton
-        fun provideQuestRepository(impl: QuestRepositoryImpl, eventBus: AppEventBus): QuestRepository =
-            TelemetryQuestRepository(inner = impl, eventBus = eventBus)
-    }
+    @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
 }

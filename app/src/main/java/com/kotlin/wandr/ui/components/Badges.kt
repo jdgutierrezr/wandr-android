@@ -20,12 +20,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/** Look of a [StatusBadge]. */
 enum class BadgeStyle { Success, Neutral, Solid, Danger }
 
-/**
- * Small pill with a status: "Completed", "In Progress", "Beginner Quest", "Trailblazer", "Locked".
- */
 @Composable
 fun StatusBadge(
     text: String,
@@ -52,16 +48,11 @@ fun StatusBadge(
     }
 }
 
-/** "+50 XP" reward badge. */
 @Composable
 fun XpBadge(xp: Int, modifier: Modifier = Modifier, style: BadgeStyle = BadgeStyle.Success) {
     StatusBadge(text = "+$xp XP", modifier = modifier, style = style, icon = Icons.Rounded.Bolt)
 }
 
-/**
- * Filter / choice chip: categories on the map, interests in onboarding, tabs of Side Quests.
- * Selected = soft green with a green border.
- */
 @Composable
 fun WandrChip(
     label: String,

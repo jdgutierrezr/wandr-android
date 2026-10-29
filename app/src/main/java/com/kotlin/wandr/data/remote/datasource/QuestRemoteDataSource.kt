@@ -18,7 +18,6 @@ import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Facade over the quest tables and RPCs. */
 @Singleton
 class QuestRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
@@ -32,8 +31,6 @@ class QuestRemoteDataSource @Inject constructor(
                 put("p_radius_km", radiusKm)
             },
         ).decodeList()
-
-    /** `nearby_quests` does not return tags, so they are fetched for those quests in one call. */
 
     suspend fun recommendQuests(latitude: Double, longitude: Double, radiusKm: Double, energyLevel: String, ): List<RecommendedQuestDto> =
         supabase.postgrest.rpc(
@@ -94,7 +91,6 @@ class QuestRemoteDataSource @Inject constructor(
         supabase.postgrest.rpc("abandon_quest", buildJsonObject { put("p_quest_id", questId) }).decodeAs()
 }
 
-/** Facade over Supabase Storage. */
 @Singleton
 class StorageRemoteDataSource @Inject constructor(
     private val supabase: SupabaseClient,
@@ -102,7 +98,6 @@ class StorageRemoteDataSource @Inject constructor(
     /** Waits for the session: uploads run right after coming back from the camera. */
     suspend fun userId(): String = supabase.awaitUserId()
 
-    /** Uploads (or replaces) a file and returns its path inside the bucket. */
     suspend fun upload(bucket: String, path: String, bytes: ByteArray): String {
         supabase.storage.from(bucket).upload(path, bytes) { upsert = true }
         return path

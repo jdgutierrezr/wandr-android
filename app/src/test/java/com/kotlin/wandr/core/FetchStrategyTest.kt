@@ -18,7 +18,6 @@ import java.io.IOException
 
 class FetchStrategyTest {
 
-    /** Room stand-in: refresh writes here, the strategy observes it. */
     private val cache = MutableStateFlow<List<String>>(emptyList())
     private var refreshCalls = 0
 
@@ -28,8 +27,6 @@ class FetchStrategyTest {
     }
 
     private fun refreshOffline(): Unit = throw IOException("no network")
-
-    // ---------- NetworkFirst ----------
 
     @Test
     fun `network first emits loading then fresh data`() = runTest {
@@ -59,8 +56,6 @@ class FetchStrategyTest {
         }
     }
 
-    // ---------- CacheFirst ----------
-
     @Test
     fun `cache first does not touch the network when the cache has data`() = runTest {
         cache.value = listOf("cached")
@@ -86,8 +81,6 @@ class FetchStrategyTest {
         }
         assertEquals(0, refreshCalls)
     }
-
-    // ---------- CacheOnly ----------
 
     @Test
     fun `cache only marks data as stale and never refreshes`() = runTest {
@@ -115,8 +108,6 @@ class FetchStrategyTest {
             assertEquals(Resource.Success(listOf("a", "b")), awaitItem())
         }
     }
-
-    // ---------- Selector ----------
 
     @Test
     fun `selector uses cache only while offline, whatever the policy`() {

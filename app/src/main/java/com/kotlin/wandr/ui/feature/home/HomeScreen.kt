@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Star
@@ -41,7 +40,6 @@ import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -592,80 +590,6 @@ private fun MysterySegment(
             maxLines = 1,
         )
     }
-}
-// =============================================================
-// ENERGY FILTER
-// =============================================================
-
-@Composable
-private fun EnergyFilter(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-
-    FilterChip(
-        selected = selected,
-
-        onClick = onClick,
-
-        modifier = modifier,
-
-        label = {
-            Text(
-                text = text,
-                maxLines = 1,
-            )
-        },
-
-        colors =
-            FilterChipDefaults.filterChipColors(
-                selectedContainerColor =
-                    MaterialTheme.colorScheme.primary,
-
-                selectedLabelColor =
-                    MaterialTheme.colorScheme.onPrimary,
-            ),
-    )
-}
-
-
-// =============================================================
-// RADIUS FILTER
-// =============================================================
-
-@Composable
-private fun RadiusFilter(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-
-    FilterChip(
-        selected = selected,
-
-        onClick = onClick,
-
-        modifier = modifier,
-
-        label = {
-            Text(
-                text = text,
-                maxLines = 1,
-            )
-        },
-
-        colors =
-            FilterChipDefaults.filterChipColors(
-                selectedContainerColor =
-                    MaterialTheme.colorScheme.primary,
-
-                selectedLabelColor =
-                    MaterialTheme.colorScheme.onPrimary,
-            ),
-    )
 }
 
 

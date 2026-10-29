@@ -21,10 +21,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * The base of almost every block in the mockups: a white surface with a thin border and
- * rounded corners. Pass [onClick] to make the whole card tappable.
- */
 @Composable
 fun WandrCard(
     modifier: Modifier = Modifier,
@@ -46,7 +42,6 @@ fun WandrCard(
     }
 }
 
-/** Icon inside a soft circle, like the ones in stat cards, rewards and achievements. */
 @Composable
 fun IconCircle(
     icon: ImageVector,

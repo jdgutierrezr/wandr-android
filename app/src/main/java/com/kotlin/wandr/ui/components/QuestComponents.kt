@@ -36,10 +36,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Photo placeholder + image from a URL. The soft background and icon show while the photo
- * loads or when there is none (the seed data uses example.com URLs that do not exist).
- */
 @Composable
 fun CoverImage(imageUrl: String?, contentDescription: String?, modifier: Modifier = Modifier) {
     Box(contentAlignment = Alignment.Center, modifier = modifier.background(WandrTheme.colors.successContainer)) {
@@ -55,7 +51,6 @@ fun CoverImage(imageUrl: String?, contentDescription: String?, modifier: Modifie
     }
 }
 
-/** "📍 Chapinero Alto, Bogotá" / "🕒 ~25 mins" line. */
 @Composable
 fun MetaText(text: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(WandrTheme.spacing.xs), modifier = modifier) {
@@ -64,10 +59,6 @@ fun MetaText(text: String, icon: ImageVector, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * Big quest / event card with the photo on top: "Upcoming Quests", "Quest of the Week".
- * [badge] goes over the photo (e.g. "Happening Now"); [footer] is free space for buttons.
- */
 @Composable
 fun QuestCard(
     title: String,
@@ -108,7 +99,6 @@ fun QuestCard(
     }
 }
 
-/** Compact quest row with a thumbnail on the right: the card over the Discovery Map. */
 @Composable
 fun QuestRow(
     title: String,
@@ -134,13 +124,8 @@ fun QuestRow(
     }
 }
 
-/** State of a step in "Quest Objectives". */
 enum class ObjectiveState { Pending, InProgress, Done }
 
-/**
- * One step of a quest. Done = green check and struck-through title; InProgress = spinner and a
- * green left edge; a camera icon marks steps that need a photo.
- */
 @Composable
 fun ObjectiveItem(
     title: String,
@@ -197,7 +182,6 @@ private fun ObjectiveMarker(state: ObjectiveState) {
     }
 }
 
-/** "Rewards · Unlocked immediately on completion ....... [💎 +50 XP]" block of Quest Details. */
 @Composable
 fun RewardRow(title: String, description: String, xp: Int, icon: ImageVector, modifier: Modifier = Modifier) {
     WandrCard(modifier = modifier.fillMaxWidth(), containerColor = WandrTheme.colors.locked, borderColor = WandrTheme.colors.locked) {

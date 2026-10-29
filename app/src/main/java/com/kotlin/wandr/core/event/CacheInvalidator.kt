@@ -12,10 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Subscriber of the [AppEventBus] that keeps the cache fresh. Whoever finishes a quest does not
- * need to know that the profile, badges and history must be refreshed; this class reacts to it.
- */
 @Singleton
 class CacheInvalidator @Inject constructor(
     private val eventBus: AppEventBus,
@@ -28,12 +24,10 @@ class CacheInvalidator @Inject constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
 
-        // New XP, level, streak, badges and history
         eventBus.subscribe<AppEvent.QuestCompleted>()
             .onEach { profileRepository.refreshAll() }
             .launchIn(scope)
 
-        // Another user must never see the previous user's cached data
         eventBus.subscribe<AppEvent.SignedOut>()
             .onEach { withContext(Dispatchers.IO) { database.clearAllTables() } }
             .launchIn(scope)

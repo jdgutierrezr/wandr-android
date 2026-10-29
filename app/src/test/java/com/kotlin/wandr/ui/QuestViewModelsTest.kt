@@ -4,21 +4,17 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.AppException
-import com.kotlin.wandr.core.event.AppEvent
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
-import com.kotlin.wandr.data.repository.TagRepository
 import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
-import com.kotlin.wandr.domain.model.Tag
 import com.kotlin.wandr.testutil.MainDispatcherRule
 import com.kotlin.wandr.testutil.activeQuest
 import com.kotlin.wandr.testutil.objective
@@ -32,11 +28,9 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -48,7 +42,6 @@ class QuestViewModelsTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
     private val questRepository = mockk<QuestRepository>()
-    private val tagRepository = mockk<TagRepository>()
     private val storageRepository = mockk<StorageRepository>()
     /** Drop-off data for the smart hint. Default: one abandon of q1 after step 1. */
     private val analyticsRepository = mockk<AnalyticsRepository> {
@@ -56,7 +49,6 @@ class QuestViewModelsTest {
             QuestDropoffReport(listOf(DropoffPoint("q1", "Quest q1", 2, 1, "Step 1", 1)))
         )
     }
-    private val bus = AppEventBus()
     private val location = UserLocation(LocationProvider.BOGOTA_CENTER, UserLocation.Source.FALLBACK)
     private val locationProvider = mockk<LocationProvider> { coEvery { currentLocation() } returns location }
 
@@ -67,25 +59,18 @@ class QuestViewModelsTest {
         every { locationUpdates(any(), any()) } returns gps
     }
 
-    // ---------- Home ----------
-
     private fun home(nearby: Resource<List<com.kotlin.wandr.domain.model.Quest>>): HomeViewModel {
         every { questRepository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Loading, nearby)
-        every { tagRepository.observeInterestIds() } returns flowOf(setOf("t-food"))
-        every { tagRepository.observeTags(any()) } returns
-            flowOf(Resource.Success(listOf(Tag("t-food", "food"), Tag("t-music", "music"))))
-        return HomeViewModel(questRepository, tagRepository, locationProvider, bus)
+        return HomeViewModel(questRepository, locationProvider)
     }
 
     @Test
-    fun `home recommends quests that match the user's interests`() {
+    fun `home lists the nearby quests and the available tags`() {
         val viewModel = home(Resource.Success(listOf(quest("q1", "music"), quest("q2", "food", "outdoors"))))
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals(2, state.quests.size)
-        assertEquals(listOf("q2"), state.recommendations.map { it.quest.id })
-        assertEquals("food", state.recommendations.single().becauseYouLiked)
         assertEquals(listOf("food", "music", "outdoors"), state.availableTags)
         assertEquals(UserLocation.Source.FALLBACK, state.locationSource)
     }
@@ -106,23 +91,13 @@ class QuestViewModelsTest {
     }
 
     @Test
-    fun `home reloads by itself when the connection returns`() = runTest {
-        val viewModel = home(Resource.Success(listOf(quest("q1")), isStale = true))
-        bus.publish(AppEvent.ConnectivityChanged(isOnline = true))
-        verify(exactly = 2) { questRepository.nearbyQuests(any(), any(), any()) }
-        assertTrue(viewModel.uiState.value.quests.isNotEmpty())
-    }
-
-    // ---------- Quest detail ----------
-
-    @Test
     fun `quest detail starts the quest and asks to open the tracker`() {
         val detail = QuestDetail(quest("q1"), place = null, objectives = listOf(objective("o1", "q1", 1)))
         every { questRepository.questDetail("q1", any()) } returns flowOf(Resource.Success(detail))
         every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
         coEvery { questRepository.startQuest("q1") } returns Result.success(Unit)
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
         assertEquals(detail, viewModel.uiState.value.detail)
         assertFalse(viewModel.uiState.value.isInProgress)
 
@@ -138,35 +113,10 @@ class QuestViewModelsTest {
         coEvery { questRepository.startQuest("q1") } returns
             Result.failure(AppException(AppError.Server("You already completed this quest")))
 
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
+        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository)
         assertTrue(viewModel.uiState.value.isInProgress)
         viewModel.startQuest()
         assertEquals("You already completed this quest", viewModel.uiState.value.errorMessage)
-    }
-
-    @Test
-    fun `quest detail reports QUEST_VIEWED once per visit (BQ8)`() = runTest {
-        every { questRepository.questDetail("q1", any()) } returns flowOf(Resource.Loading)
-        every { questRepository.activeQuests(any()) } returns flowOf(Resource.Success(emptyList()))
-        val viewModel = QuestDetailViewModel(SavedStateHandle(mapOf(QuestDetailViewModel.QUEST_ID_ARG to "q1")), questRepository, bus)
-
-        bus.subscribe<AppEvent.QuestViewed>().test {
-            viewModel.onScreenShown()
-            viewModel.onScreenShown() // e.g. after a rotation
-            assertEquals(AppEvent.QuestViewed("q1"), awaitItem())
-            expectNoEvents()
-        }
-    }
-
-    // ---------- Active quest ----------
-
-    @Test
-    fun `navigate reports NAVIGATION_STARTED (BQ8)`() = runTest {
-        val viewModel = tracker()
-        bus.subscribe<AppEvent.NavigationStarted>().test {
-            viewModel.startNavigation("q1")
-            assertEquals(AppEvent.NavigationStarted("q1"), awaitItem())
-        }
     }
 
     private val photoStep = objective("o2", "q1", 2, requiresPhoto = true)
@@ -174,7 +124,7 @@ class QuestViewModelsTest {
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository, bus, analyticsRepository, trackerLocation)
+        return ActiveQuestViewModel(questRepository, storageRepository, analyticsRepository, trackerLocation)
     }
 
     @Test

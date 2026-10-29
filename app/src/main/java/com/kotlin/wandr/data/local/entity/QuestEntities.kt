@@ -17,7 +17,6 @@ data class QuestEntity(
     val estimatedDuration: Int?,
     val pointsReward: Int,
     val coverImageUrl: String?,
-    /** Distance from the last location used in `nearby_quests`. Null = not in the last nearby result. */
     val distanceKm: Double?,
 )
 
@@ -36,7 +35,6 @@ data class ObjectiveEntity(
     val orderIndex: Int,
 )
 
-/** The user's attempts at quests: pending (active) and completed (history). */
 @Entity(tableName = "quest_completions", indices = [Index("questId"), Index("status")])
 data class CompletionEntity(
     @PrimaryKey val id: String,

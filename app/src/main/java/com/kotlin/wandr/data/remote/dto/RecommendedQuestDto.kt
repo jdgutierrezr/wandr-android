@@ -14,6 +14,5 @@ data class RecommendedQuestDto(
     val place_id: String,
     val place_name: String,
     val distance_km: Double,
-    val matched_interests: Long,
     val energy_match: Boolean,
 )

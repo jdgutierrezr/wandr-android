@@ -3,8 +3,6 @@ package com.kotlin.wandr.ui.feature.quest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.error.appError
-import com.kotlin.wandr.core.event.AppEvent
-import com.kotlin.wandr.core.event.AppEventBus
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
@@ -52,10 +50,8 @@ data class ActiveQuestUiState(
     val isLoading: Boolean = true,
     val quests: List<ActiveQuest> = emptyList(),
     val isShowingSavedData: Boolean = false,
-    /** Step being sent (show a spinner on it). */
     val submittingObjectiveId: String? = null,
     val abandoningQuestId: String? = null,
-    /** Last checked step: "2 of 3", or the XP / level / badges when the quest was completed. */
     val lastResult: ObjectiveResult? = null,
     val errorMessage: String? = null,
     /** Smart feature: BQ8 drop-off data, used to warn on the riskiest step. Null = no hint. */
@@ -68,13 +64,11 @@ data class ActiveQuestUiState(
     fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
 }
 
-/** Active Quest Tracker. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ActiveQuestViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val storageRepository: StorageRepository,
-    private val eventBus: AppEventBus,
     private val analyticsRepository: AnalyticsRepository,
     private val locationProvider: LocationProvider,
 ) : ViewModel() {
@@ -158,10 +152,6 @@ class ActiveQuestViewModel @Inject constructor(
         UserLocation.Source.CURRENT -> LiveDistance(point.distanceMetersTo(destination))
     }
 
-    /**
-     * Checks a step. If it needs a photo, pass the JPEG taken with the camera in [photoJpeg]:
-     * it is uploaded to Storage first and its path is sent to `complete_objective`.
-     */
     fun completeObjective(questId: String, objectiveId: String, photoJpeg: ByteArray? = null) {
         if (_uiState.value.submittingObjectiveId != null) return
         val objective = _uiState.value.quests
@@ -186,14 +176,6 @@ class ActiveQuestViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    /**
-     * BQ8 funnel: the user tapped "Navigate". The screen opens the maps app; this only publishes
-     * NAVIGATION_STARTED for the QuestFunnelTracker (Observer).
-     */
-    fun startNavigation(questId: String) {
-        viewModelScope.launch { eventBus.publish(AppEvent.NavigationStarted(questId)) }
     }
 
     fun abandonQuest(questId: String) {

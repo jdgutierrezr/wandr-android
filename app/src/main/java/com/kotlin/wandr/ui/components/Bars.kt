@@ -5,15 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,10 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.kotlin.wandr.ui.theme.WandrTheme
 import androidx.compose.material.icons.filled.*
 
-/**
- * Top bar of the main screens: "Discovery Map  🔥3 ...... [filters] [bell] [avatar]".
- * [onBack] adds the back arrow (detail screens). [streak] shows the fire counter next to the title.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WandrTopBar(
@@ -65,17 +54,6 @@ fun WandrTopBar(
     )
 }
 
-/** Bell with a dot when there are unread notifications. */
-@Composable
-fun NotificationsAction(unreadCount: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        BadgedBox(badge = { if (unreadCount > 0) Badge(containerColor = WandrTheme.colors.danger) }) {
-            Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
-        }
-    }
-}
-
-/** Tabs of the bottom bar, in the order of the mockups. */
 enum class MainTab(
     val label: String,
     val icon: ImageVector,

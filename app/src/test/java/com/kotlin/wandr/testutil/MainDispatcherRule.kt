@@ -9,7 +9,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
-/** Makes `viewModelScope` run on a test dispatcher. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(
     val dispatcher: TestDispatcher = UnconfinedTestDispatcher(),

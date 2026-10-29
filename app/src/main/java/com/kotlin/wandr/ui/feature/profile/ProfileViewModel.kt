@@ -37,7 +37,6 @@ data class ProfileUiState(
     /** The streak summary could not be loaded (it needs a connection): show "Try again". */
     val streakFailed: Boolean = false,
     val isShowingSavedData: Boolean = false,
-    /** A quest was just completed somewhere in the app: show the celebration. */
     val celebration: AppEvent.QuestCompleted? = null,
     val isSignedOut: Boolean = false,
     val errorMessage: String? = null,
@@ -60,8 +59,6 @@ class ProfileViewModel @Inject constructor(
     private var streakJob: Job? = null
 
     init {
-        // Observer: these are Room flows, so when the CacheInvalidator refreshes the cache
-        // after a quest is completed, this screen updates by itself.
         refreshTrigger
             .flatMapLatest {
                 combine(

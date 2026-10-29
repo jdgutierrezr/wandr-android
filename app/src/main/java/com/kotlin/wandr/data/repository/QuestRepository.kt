@@ -31,7 +31,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface QuestRepository {
-    /** Quests around [location], closest first (Discovery Engine). */
     fun nearbyQuests(
         location: GeoPoint,
         radiusKm: Double = DEFAULT_RADIUS_KM,
@@ -48,15 +47,12 @@ interface QuestRepository {
         energyLevel: String = "relaxed",
     ): Result<List<RecommendedQuestDto>>
 
-    /** Quest, place and ordered steps (Quest Details). */
     fun questDetail(questId: String, policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<QuestDetail>>
 
-    /** Quests in progress with their checked steps (Active Quest Tracker). Works offline (QS8). */
     fun activeQuests(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<ActiveQuest>>>
 
     suspend fun startQuest(questId: String): Result<Unit>
 
-    /** [photoPath] is the Storage path from [StorageRepository.uploadQuestPhoto], if the step needs one. */
     suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String? = null): Result<ObjectiveResult>
 
     suspend fun abandonQuest(questId: String): Result<Unit>
@@ -116,7 +112,6 @@ class QuestRepositoryImpl @Inject constructor(
             .fetch(
                 local = local,
                 refresh = { refreshDetail(questId) },
-                // A quest cached from the nearby list has no steps yet: that is not a full detail
                 isEmpty = { it == null || it.objectives.isEmpty() },
             )
             .requireData()
@@ -125,22 +120,17 @@ class QuestRepositoryImpl @Inject constructor(
     override fun activeQuests(policy: FetchPolicy) = strategies.select(policy).fetch(
         local = questDao.observeActive().map { rows -> rows.map { it.toDomain() } },
         refresh = ::refreshActive,
-        // "No active quests" is a valid answer, not an empty cache
         isEmpty = { false },
     )
 
     override suspend fun startQuest(questId: String) = safeCall {
         remote.startQuest(questId)
         refreshActive()
-        eventBus.publish(AppEvent.QuestStarted(questId))
     }
 
     override suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String?) = safeCall {
         val result = remote.completeObjective(questId, objectiveId, photoPath).toDomain()
         refreshActive()
-        eventBus.publish(
-            AppEvent.ObjectiveCompleted(questId, objectiveId, result.completedObjectives, result.totalObjectives)
-        )
         if (result.questCompleted) {
             eventBus.publish(
                 AppEvent.QuestCompleted(
@@ -152,7 +142,6 @@ class QuestRepositoryImpl @Inject constructor(
                     newBadges = result.newBadges,
                 )
             )
-            result.newBadges.forEach { eventBus.publish(AppEvent.BadgeUnlocked(it)) }
         }
         result
     }
@@ -160,7 +149,6 @@ class QuestRepositoryImpl @Inject constructor(
     override suspend fun abandonQuest(questId: String) = safeCall {
         remote.abandonQuest(questId)
         refreshActive()
-        eventBus.publish(AppEvent.QuestAbandoned(questId))
     }
 
     private suspend fun refreshDetail(questId: String) {

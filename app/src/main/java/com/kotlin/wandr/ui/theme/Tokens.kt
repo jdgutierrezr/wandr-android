@@ -8,24 +8,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * Design tokens that Material 3 does not have. Read them with `WandrTheme.colors`,
- * `WandrTheme.spacing` and `WandrTheme.radius` inside any composable.
- */
 @Immutable
 data class WandrColors(
     val textSecondary: Color,
     val border: Color,
-    /** Selected chips, "Completed", "+50 XP". */
     val success: Color,
     val successContainer: Color,
     val successBorder: Color,
-    /** Locked achievements and disabled cards. */
     val locked: Color,
     val onLocked: Color,
     val danger: Color,
     val dangerContainer: Color,
-    /** Soft background of onboarding and celebration screens. */
     val heroGradient: Brush,
 )
 
@@ -55,9 +48,7 @@ val DarkWandrColors = WandrColors(
     heroGradient = Brush.verticalGradient(listOf(ForestSurface, ForestDeep)),
 )
 
-/** Spacing scale. Use these instead of loose numbers so every screen breathes the same way. */
 object WandrSpacing {
-    val xxs = 2.dp
     val xs = 4.dp
     val sm = 8.dp
     val md = 12.dp
@@ -65,7 +56,6 @@ object WandrSpacing {
     val xl = 24.dp
     val xxl = 32.dp
 
-    /** Side margin of every screen. */
     val screen = 20.dp
 }
 
@@ -76,7 +66,6 @@ object WandrRadius {
     val xl = 24.dp
 }
 
-/** Material shapes: small = chips' inner parts, medium = cards and fields, large = hero cards. */
 val WandrShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
     small = RoundedCornerShape(WandrRadius.sm),

@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/** Rounded green progress bar (milestones, quest progress, timers). [progress] goes from 0 to 1. */
 @Composable
 fun WandrProgressBar(progress: Float, modifier: Modifier = Modifier) {
     LinearProgressIndicator(
@@ -38,7 +37,6 @@ fun WandrProgressBar(progress: Float, modifier: Modifier = Modifier) {
     )
 }
 
-/** Small stat: "⭐ Total Points  1,250", "🔥 Current Streak  3 weeks". */
 @Composable
 fun StatCard(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier, unit: String? = null) {
     WandrCard(modifier = modifier) {
@@ -53,7 +51,6 @@ fun StatCard(label: String, value: String, icon: ImageVector, modifier: Modifier
     }
 }
 
-/** "NEXT MILESTONE  Level 5 ....... 150 pts to go  [=========   ] 850 / 1,000 XP". */
 @Composable
 fun MilestoneCard(title: String, current: Int, target: Int, modifier: Modifier = Modifier, label: String = "Next milestone") {
     WandrCard(modifier = modifier.fillMaxWidth()) {
@@ -68,7 +65,6 @@ fun MilestoneCard(title: String, current: Int, target: Int, modifier: Modifier =
     }
 }
 
-/** Achievement tile. Locked ones are grey with a padlock, like "Early Bird". */
 @Composable
 fun AchievementCard(
     title: String,

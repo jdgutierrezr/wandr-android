@@ -13,7 +13,6 @@ data class PlaceEntity(
     val longitude: Double,
     val averageRating: Double,
     val coverImageUrl: String?,
-    /** Distance from the last location used in `nearby_places`. Null = not in the last nearby result. */
     val distanceKm: Double?,
 )
 
@@ -29,16 +28,4 @@ data class EventEntity(
     val placeName: String?,
     val attendees: Int,
     val isAttending: Boolean,
-)
-
-/** Telemetry waiting to be sent to Supabase in a batch. */
-@Entity(tableName = "telemetry_events")
-data class TelemetryEventEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val durationMs: Long,
-    val success: Boolean,
-    /** Metadata as a JSON object string. */
-    val metadataJson: String,
-    val createdAtMillis: Long,
 )
