@@ -20,6 +20,8 @@ import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.StorageRepositoryImpl
 import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.data.repository.TelemetryRepositoryImpl
+import com.kotlin.wandr.data.repository.HomePreferencesRepository
+import com.kotlin.wandr.data.repository.HomePreferencesRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -83,4 +85,5 @@ abstract class RepositoryModule {
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
     @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
     @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
+    @Binds abstract fun bindHomePreferencesRepository(impl: HomePreferencesRepositoryImpl): HomePreferencesRepository
 }
