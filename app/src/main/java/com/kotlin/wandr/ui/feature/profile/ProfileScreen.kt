@@ -81,6 +81,7 @@ fun ProfileRoute(
     /** Debug builds only: opens the BQ8 abandonment funnel (internal team analytics). */
     onOpenTeamAnalytics: (() -> Unit)? = null,
     onOpenLoadTime: (() -> Unit)? = null,
+    onOpenStepResponse: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -110,6 +111,7 @@ fun ProfileRoute(
         onSelectTab = onSelectTab,
         onOpenTeamAnalytics = onOpenTeamAnalytics,
         onOpenLoadTime = onOpenLoadTime,
+        onOpenStepResponse = onOpenStepResponse,
     )
 }
 
@@ -123,6 +125,7 @@ fun ProfileScreen(
     onSelectTab: (MainTab) -> Unit,
     onOpenTeamAnalytics: (() -> Unit)? = null,
     onOpenLoadTime: (() -> Unit)? = null,
+    onOpenStepResponse: (() -> Unit)? = null,
     todayIndex: Int = LocalDate.now(BOGOTA).dayOfWeek.value - 1,
 ) {
     val profile = state.profile
@@ -201,6 +204,9 @@ fun ProfileScreen(
             }
             if (onOpenLoadTime != null) {
                 item { LinkButton(text = "Team analytics · BQ1 load time (debug)", onClick = onOpenLoadTime) }
+            }
+            if (onOpenStepResponse != null) {
+                item { LinkButton(text = "Team analytics · BQ2 step response (debug)", onClick = onOpenStepResponse) }
             }
         }
     }

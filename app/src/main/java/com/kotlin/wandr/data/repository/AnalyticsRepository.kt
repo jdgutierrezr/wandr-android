@@ -8,6 +8,7 @@ import com.kotlin.wandr.data.mapper.toReport
 import com.kotlin.wandr.data.remote.datasource.AnalyticsRemoteDataSource
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.RecommendationLoadTime
+import com.kotlin.wandr.domain.model.StepResponseTime
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +25,9 @@ interface AnalyticsRepository {
     suspend fun refreshQuestDropoff(): Result<QuestDropoffReport>
 
     suspend fun recommendationLoadTime(): Result<RecommendationLoadTime>
+
+    /** BQ2: average server time of each quest step, slowest first. */
+    suspend fun stepResponseTimes(): Result<List<StepResponseTime>>
 }
 
 @Singleton
@@ -63,6 +67,10 @@ class AnalyticsRepositoryImpl @Inject constructor(
 
     override suspend fun recommendationLoadTime() = safeCall {
         remote.recommendationLoadTime().toDomain()
+    }
+
+    override suspend fun stepResponseTimes() = safeCall {
+        remote.stepResponseTimes().map { it.toDomain() }.sortedByDescending { it.avgMs }
     }
 
     companion object {

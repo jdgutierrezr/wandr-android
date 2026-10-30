@@ -7,6 +7,7 @@ import com.kotlin.wandr.core.strategy.FetchPolicy
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.core.strategy.StrategySelector
 import com.kotlin.wandr.core.strategy.requireData
+import com.kotlin.wandr.core.telemetry.TelemetryEvents
 import com.kotlin.wandr.data.local.dao.PlaceDao
 import com.kotlin.wandr.data.local.dao.QuestDao
 import com.kotlin.wandr.data.mapper.tagEntities
@@ -21,6 +22,7 @@ import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.QuestDetail
 import com.kotlin.wandr.domain.model.Tier
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.TimeSource
 
 interface QuestRepository {
     fun nearbyQuests(
@@ -69,6 +72,7 @@ class QuestRepositoryImpl @Inject constructor(
     private val placeDao: PlaceDao,
     private val strategies: StrategySelector,
     private val eventBus: AppEventBus,
+    private val telemetry: TelemetryRepository,
 ) : QuestRepository {
 
     override fun nearbyQuests(location: GeoPoint, radiusKm: Double, policy: FetchPolicy) =
@@ -129,7 +133,7 @@ class QuestRepositoryImpl @Inject constructor(
     }
 
     override suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String?) = safeCall {
-        val result = remote.completeObjective(questId, objectiveId, photoPath).toDomain()
+        val result = timedCompleteObjective(questId, objectiveId, photoPath).toDomain()
         refreshActive()
         if (result.questCompleted) {
             eventBus.publish(
@@ -145,6 +149,24 @@ class QuestRepositoryImpl @Inject constructor(
         }
         result
     }
+
+    private suspend fun timedCompleteObjective(questId: String, objectiveId: String, photoPath: String?) =
+        TimeSource.Monotonic.markNow().let { start ->
+            val response = runCatching { remote.completeObjective(questId, objectiveId, photoPath) }
+            if (response.exceptionOrNull() !is CancellationException) {
+                telemetry.record(
+                    name = TelemetryEvents.QUEST_STEP_RESPONSE,
+                    durationMs = start.elapsedNow().inWholeMilliseconds,
+                    success = response.isSuccess,
+                    metadata = mapOf(
+                        "quest_id" to questId,
+                        "objective_id" to objectiveId,
+                        "with_photo" to (photoPath != null).toString(),
+                    ),
+                )
+            }
+            response.getOrThrow()
+        }
 
     override suspend fun abandonQuest(questId: String) = safeCall {
         remote.abandonQuest(questId)
