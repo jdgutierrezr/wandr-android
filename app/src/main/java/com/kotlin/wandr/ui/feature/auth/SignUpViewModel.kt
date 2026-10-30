@@ -2,7 +2,9 @@ package com.kotlin.wandr.ui.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.appError
+import com.kotlin.wandr.core.network.ConnectivityObserver
 import com.kotlin.wandr.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +26,7 @@ data class SignUpUiState(
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SignUpUiState())
@@ -42,6 +45,10 @@ class SignUpViewModel @Inject constructor(
         if (state.isLoading) return
         validate(state)?.let { message ->
             _uiState.update { it.copy(errorMessage = message) }
+            return
+        }
+        if (!connectivity.isOnline()) {
+            _uiState.update { it.copy(errorMessage = AppError.Network.message) }
             return
         }
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }

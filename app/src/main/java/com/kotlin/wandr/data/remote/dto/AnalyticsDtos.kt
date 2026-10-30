@@ -17,3 +17,12 @@ data class QuestDropoffDto(
     @SerialName("abandoned_count") val abandonedCount: Int = 0,
     @SerialName("quest_abandoned_total") val questAbandonedTotal: Int = 0,
 )
+
+@Serializable
+data class RecommendationLoadTimeDto(
+    val requests: Int = 0,
+    @SerialName("avg_ms") val avgMs: Int? = null,
+    @SerialName("p95_ms") val p95Ms: Int? = null,
+    @SerialName("network_avg_ms") val networkAvgMs: Int? = null,
+    @SerialName("cache_avg_ms") val cacheAvgMs: Int? = null,
+)
