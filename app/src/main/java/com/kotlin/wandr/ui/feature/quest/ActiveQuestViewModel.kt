@@ -31,18 +31,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** What the GPS part of Active Quest is doing, so the screen never stays silent. */
 enum class LocationStatus {
-    /** Not following the GPS (no permission, or the screen is not visible). */
     OFF,
-
-    /** Waiting for the first reading. */
     SEARCHING,
-
-    /** The phone has no position at all (location turned off, or the emulator has none set). */
     NO_FIX,
-
-    /** [ActiveQuestUiState.liveDistance] is up to date. */
     LIVE,
 }
 
@@ -54,13 +46,10 @@ data class ActiveQuestUiState(
     val abandoningQuestId: String? = null,
     val lastResult: ObjectiveResult? = null,
     val errorMessage: String? = null,
-    /** Smart feature: BQ8 drop-off data, used to warn on the riskiest step. Null = no hint. */
     val dropoff: QuestDropoffReport? = null,
-    /** Context-aware: distance from the user's GPS to the quest's place. Null = unknown. */
     val liveDistance: LiveDistance? = null,
     val locationStatus: LocationStatus = LocationStatus.OFF,
 ) {
-    /** The step of [questId] where most people give up, or null if there is no data. */
     fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
 }
 
@@ -99,11 +88,6 @@ class ActiveQuestViewModel @Inject constructor(
         loadDropoffHints()
     }
 
-    /**
-     * Smart feature: reuses the BQ8 analytics (where users abandon quests) to warn the user on
-     * the step where most people give up. It is only a hint, so a failure is silent: no data
-     * or no connection simply means no hint.
-     */
     private fun loadDropoffHints() {
         viewModelScope.launch {
             analyticsRepository.questDropoff()
@@ -115,11 +99,6 @@ class ActiveQuestViewModel @Inject constructor(
 
     private var distanceJob: Job? = null
 
-    /**
-     * Context-aware + sensor: follows the phone's GPS and keeps [ActiveQuestUiState.liveDistance]
-     * up to date. The screen calls it when it is visible and calls [stopTrackingDistance] when it
-     * leaves, so the GPS does not drain the battery in the background.
-     */
     fun trackDistanceTo(destination: GeoPoint) {
         distanceJob?.cancel()
         _uiState.update { it.copy(locationStatus = LocationStatus.SEARCHING) }
@@ -145,7 +124,6 @@ class ActiveQuestViewModel @Inject constructor(
         _uiState.update { it.copy(locationStatus = LocationStatus.OFF) }
     }
 
-    /** No permission or no fix (FALLBACK = center of Bogota) must not pretend to know the distance. */
     private fun UserLocation.distanceTo(destination: GeoPoint): LiveDistance? = when (source) {
         UserLocation.Source.FALLBACK -> null
         UserLocation.Source.LAST_KNOWN -> LiveDistance(point.distanceMetersTo(destination), isApproximate = true)
@@ -194,7 +172,6 @@ class ActiveQuestViewModel @Inject constructor(
     fun onErrorShown() = _uiState.update { it.copy(errorMessage = null) }
 
     private companion object {
-        /** New GPS readings only after moving this much or waiting this long (QS5: battery). */
         const val DISTANCE_STEP_METERS = 10f
         const val GPS_INTERVAL_MS = 5_000L
     }
