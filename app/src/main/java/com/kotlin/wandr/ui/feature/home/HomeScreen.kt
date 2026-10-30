@@ -176,19 +176,34 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            if (state.recommendations.isNotEmpty()) {
+            if (state.isShowingCachedMystery) {
+                Text(
+                    text = "Showing saved Mystery Quest recommendations.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
 
-                val mysteryQuest = state.recommendations.first()
+            if (state.mysteryErrorMessage != null) {
+                Text(
+                    text = state.mysteryErrorMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
 
+            val mysteryQuest = state.mysteryQuest
+
+            if (mysteryQuest != null) {
                 MysteryQuestCard(
                     recommendation = mysteryQuest,
                     revealed = state.isMysteryRevealed,
                     onReveal = onRevealMystery,
                     onSkip = onSkipMystery,
                 )
-
             } else {
-
                 MysteryEmptyCard(
                     isLoading = state.isLoadingMystery,
                     onRetry = onRefresh,
