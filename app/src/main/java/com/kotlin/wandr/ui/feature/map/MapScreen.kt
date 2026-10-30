@@ -27,7 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +48,10 @@ import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.ui.components.QuestRow
 import com.kotlin.wandr.ui.components.WandrChip
+import com.kotlin.wandr.ui.components.MainTab
+import com.kotlin.wandr.ui.components.WandrBottomBar
 import com.kotlin.wandr.ui.components.WandrTopBar
+import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
 import com.kotlin.wandr.ui.components.map.MapMarker
 import com.kotlin.wandr.ui.components.map.WandrMap
 import com.kotlin.wandr.ui.theme.WandrTheme
@@ -62,7 +68,8 @@ private val LOCATION_PERMISSIONS = arrayOf(
 @Composable
 fun MapRoute(
     map: WandrMap,
-    onBack: () -> Unit,
+    onSelectTab: (MainTab) -> Unit,
+    onOpenTracker: (questId: String) -> Unit,
     viewModel: MapViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,13 +94,24 @@ fun MapRoute(
         }
     }
 
+    var openQuestId by rememberSaveable { mutableStateOf<String?>(null) }
+
     MapScreen(
         state = state,
         map = map,
         snackbarHostState = snackbarHostState,
         onRadiusChange = viewModel::setRadius,
-        onBack = onBack,
+        onSelectTab = onSelectTab,
+        onOpenQuest = { openQuestId = it },
     )
+
+    openQuestId?.let { id ->
+        QuestDetailSheet(
+            questId = id,
+            onDismiss = { openQuestId = null },
+            onOpenTracker = onOpenTracker,
+        )
+    }
 }
 
 @Composable
@@ -102,14 +120,16 @@ fun MapScreen(
     map: WandrMap,
     snackbarHostState: SnackbarHostState,
     onRadiusChange: (Double) -> Unit,
-    onBack: () -> Unit,
+    onSelectTab: (MainTab) -> Unit,
+    onOpenQuest: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val spacing = WandrTheme.spacing
 
     Scaffold(
-        topBar = { WandrTopBar(title = "Discovery Map", onBack = onBack) },
+        topBar = { WandrTopBar(title = "Discovery Map") },
+        bottomBar = { WandrBottomBar(selected = MainTab.MAP, onSelect = onSelectTab) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -162,6 +182,7 @@ fun MapScreen(
                         subtitle = listOfNotNull(quest.placeName, quest.distanceKm?.let(::formatDistance)).joinToString(" · "),
                         imageUrl = quest.coverImageUrl,
                         xp = quest.pointsReward,
+                        onClick = { onOpenQuest(quest.id) },
                     )
                 }
                 if (state.quests.isEmpty() && !state.isLoading) {
@@ -251,7 +272,8 @@ private fun MapScreenPreview() {
             map = PreviewMap,
             snackbarHostState = SnackbarHostState(),
             onRadiusChange = {},
-            onBack = {},
+            onSelectTab = {},
+            onOpenQuest = {},
         )
     }
 }

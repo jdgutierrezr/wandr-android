@@ -9,6 +9,7 @@ import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.domain.model.QuestDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,13 +35,24 @@ class QuestDetailViewModel @Inject constructor(
     private val questRepository: QuestRepository,
 ) : ViewModel() {
 
-    private val questId: String = checkNotNull(savedStateHandle[QUEST_ID_ARG]) { "Missing $QUEST_ID_ARG" }
+    private var questId: String? = null
+    private val jobs = mutableListOf<Job>()
 
     private val _uiState = MutableStateFlow(QuestDetailUiState())
     val uiState: StateFlow<QuestDetailUiState> = _uiState.asStateFlow()
 
     init {
-        questRepository.questDetail(questId)
+        savedStateHandle.get<String>(QUEST_ID_ARG)?.let(::load)
+    }
+
+    fun load(id: String) {
+        if (questId == id) return
+        questId = id
+        jobs.forEach { it.cancel() }
+        jobs.clear()
+        _uiState.value = QuestDetailUiState()
+
+        jobs += questRepository.questDetail(id)
             .onEach { resource ->
                 _uiState.update { state ->
                     when (resource) {
@@ -56,21 +68,22 @@ class QuestDetailViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        questRepository.activeQuests(FetchPolicy.CACHE_FIRST)
+        jobs += questRepository.activeQuests(FetchPolicy.CACHE_FIRST)
             .onEach { resource ->
                 if (resource is Resource.Success) {
-                    _uiState.update { state -> state.copy(isInProgress = resource.data.any { it.questId == questId }) }
+                    _uiState.update { state -> state.copy(isInProgress = resource.data.any { it.questId == id }) }
                 }
             }
             .launchIn(viewModelScope)
     }
 
     fun startQuest() {
+        val id = questId ?: return
         if (_uiState.value.isStarting) return
         _uiState.update { it.copy(isStarting = true, errorMessage = null) }
         viewModelScope.launch {
-            questRepository.startQuest(questId)
-                .onSuccess { _uiState.update { it.copy(isStarting = false, startedQuestId = questId) } }
+            questRepository.startQuest(id)
+                .onSuccess { _uiState.update { it.copy(isStarting = false, startedQuestId = id) } }
                 .onFailure { error -> _uiState.update { it.copy(isStarting = false, errorMessage = error.appError.message) } }
         }
     }

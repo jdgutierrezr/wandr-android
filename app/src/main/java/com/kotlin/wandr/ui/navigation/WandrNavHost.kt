@@ -188,8 +188,11 @@ fun WandrNavHost(
 
             MapRoute(
                 map = map,
-                onBack = {
-                    navController.popBackStack()
+                onSelectTab = { tab ->
+                    navController.openTab(tab)
+                },
+                onOpenTracker = { questId ->
+                    navController.navigate(ActiveQuestDestination(questId))
                 },
             )
         }
@@ -204,6 +207,9 @@ fun WandrNavHost(
             HomeRoute(
                 onSelectTab = { tab ->
                     navController.openTab(tab)
+                },
+                onOpenTracker = { questId ->
+                    navController.navigate(ActiveQuestDestination(questId))
                 },
             )
         }
