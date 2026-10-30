@@ -7,3 +7,15 @@ data class RecommendationLoadTime(
     val networkAvgMs: Int?,
     val cacheAvgMs: Int?,
 )
+
+data class StepResponseTime(
+    val questId: String,
+    val questTitle: String,
+    val objectiveId: String,
+    val stepTitle: String,
+    val stepOrder: Int,
+    val requiresPhoto: Boolean,
+    val requests: Int,
+    val avgMs: Int,
+    val maxMs: Int,
+)

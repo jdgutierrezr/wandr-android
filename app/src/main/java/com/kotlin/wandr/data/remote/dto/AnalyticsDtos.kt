@@ -26,3 +26,16 @@ data class RecommendationLoadTimeDto(
     @SerialName("network_avg_ms") val networkAvgMs: Int? = null,
     @SerialName("cache_avg_ms") val cacheAvgMs: Int? = null,
 )
+
+@Serializable
+data class StepResponseTimeDto(
+    @SerialName("quest_id") val questId: String,
+    @SerialName("quest_title") val questTitle: String,
+    @SerialName("objective_id") val objectiveId: String,
+    @SerialName("step_title") val stepTitle: String,
+    @SerialName("step_order") val stepOrder: Int = 0,
+    @SerialName("requires_photo") val requiresPhoto: Boolean = false,
+    val requests: Int = 0,
+    @SerialName("avg_ms") val avgMs: Int = 0,
+    @SerialName("max_ms") val maxMs: Int = 0,
+)
