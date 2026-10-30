@@ -7,6 +7,7 @@ import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.core.telemetry.TelemetryEvents
 import com.kotlin.wandr.data.mapper.toRecommendedQuest
+import com.kotlin.wandr.data.repository.HomePreferencesRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.domain.model.Quest
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
@@ -26,6 +28,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.TimeSource
+import com.kotlin.wandr.core.error.AppError
+import com.kotlin.wandr.core.error.AppException
+import com.kotlin.wandr.core.network.ConnectivityObserver
+import com.kotlin.wandr.data.cache.MysteryQuestCache
 
 
 data class HomeUiState(
@@ -80,6 +86,12 @@ data class HomeUiState(
     val locationSource: UserLocation.Source? = null,
 
     val isLoadingMystery: Boolean = false,
+
+    // Indicates that Mystery Quest is displaying cached recommendations.
+    val isShowingCachedMystery: Boolean = false,
+
+    // Error specific to Mystery Quest.
+    val mysteryErrorMessage: String? = null,
 
     val errorMessage: String? = null,
 ) {
@@ -143,7 +155,10 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val locationProvider: LocationProvider,
+    private val homePreferencesRepository: HomePreferencesRepository,
     private val telemetry: TelemetryRepository,
+    private val mysteryQuestCache: MysteryQuestCache,
+    private val connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -154,14 +169,30 @@ class HomeViewModel @Inject constructor(
     private val refreshTrigger = MutableStateFlow(0)
 
     init {
-        refreshTrigger
-            .flatMapLatest {
-                nearbyQuests()
+        viewModelScope.launch {
+            try {
+                val savedPreferences =
+                    homePreferencesRepository.preferences.first()
+
+                _uiState.update {
+                    it.copy(
+                        mysteryEnergyLevel = savedPreferences.energyLevel,
+                        mysteryRadiusKm = savedPreferences.radiusKm,
+                    )
+                }
+            } catch (exception: Exception) {
+                // If preferences cannot be read, keep the default values.
             }
-            .onEach { resource ->
-                reduceNearbyQuests(resource)
-            }
-            .launchIn(viewModelScope)
+
+            refreshTrigger
+                .flatMapLatest {
+                    nearbyQuests()
+                }
+                .onEach { resource ->
+                    reduceNearbyQuests(resource)
+                }
+                .launchIn(viewModelScope)
+        }
     }
 
     // =========================================================
@@ -240,6 +271,9 @@ class HomeViewModel @Inject constructor(
             )
         }
 
+        viewModelScope.launch {
+            homePreferencesRepository.saveEnergyLevel(energyLevel)
+        }
         loadMysteryQuests()
     }
 
@@ -267,6 +301,9 @@ class HomeViewModel @Inject constructor(
             )
         }
 
+        viewModelScope.launch {
+            homePreferencesRepository.saveRadiusKm(radiusKm)
+        }
         loadMysteryQuests()
     }
 
@@ -300,42 +337,19 @@ class HomeViewModel @Inject constructor(
      * ask the backend for another batch.
      */
     fun skipMysteryQuest() {
+        _uiState.update { state ->
 
-        val state = _uiState.value
-
-        if (state.recommendations.isEmpty()) {
-            return
-        }
-
-        val nextIndex =
-            if (
-                state.mysteryQuestIndex + 1 <
-                state.recommendations.size
-            ) {
-                state.mysteryQuestIndex + 1
-            } else {
-                0
+            if (state.recommendations.isEmpty()) {
+                return@update state
             }
 
-        /*
-         * We reached the end of the current recommendations.
-         */
-        if (
-            nextIndex == 0 &&
-            state.mysteryQuestIndex + 1 >=
-            state.recommendations.size
-        ) {
+            val nextIndex =
+                (state.mysteryQuestIndex + 1) % state.recommendations.size
 
-            loadMysteryQuests()
-
-        } else {
-
-            _uiState.update {
-                it.copy(
-                    mysteryQuestIndex = nextIndex,
-                    mysteryRevealed = false,
-                )
-            }
+            state.copy(
+                mysteryQuestIndex = nextIndex,
+                mysteryRevealed = false,
+            )
         }
     }
 
@@ -383,8 +397,10 @@ class HomeViewModel @Inject constructor(
                         mark.elapsedNow().inWholeMilliseconds,
                         success = resource is Resource.Success,
                         metadata = mapOf(
-                            "result_count" to ((resource as? Resource.Success)?.data?.size ?: 0).toString(),
-                            "from_cache" to ((resource as? Resource.Success)?.isStale ?: false).toString(),
+                            "result_count" to ((resource as? Resource.Success)?.data?.size
+                                ?: 0).toString(),
+                            "from_cache" to ((resource as? Resource.Success)?.isStale
+                                ?: false).toString(),
                             "location_source" to location.source.name,
                             "radius_km" to QuestRepository.DEFAULT_RADIUS_KM.toString(),
                         ),
@@ -460,69 +476,172 @@ class HomeViewModel @Inject constructor(
     // =========================================================
 
     private fun loadMysteryQuests() {
-
         viewModelScope.launch {
+
+            val state = _uiState.value
+            val energyLevel = state.mysteryEnergyLevel
+            val radiusKm = state.mysteryRadiusKm
 
             _uiState.update {
                 it.copy(
                     isLoadingMystery = true,
+                    mysteryErrorMessage = null,
+                    isShowingCachedMystery = false,
                     errorMessage = null,
                 )
             }
 
-            try {
+            // 1. Use fresh cached recommendations when available.
+            val freshRecommendations = mysteryQuestCache.getFresh(
+                energyLevel = energyLevel,
+                radiusKm = radiusKm,
+            )
 
-                val state = _uiState.value
-
-                val location =
-                    locationProvider.currentLocation()
-
+            if (freshRecommendations != null) {
                 _uiState.update {
                     it.copy(
-                        locationSource = location.source
-                    )
-                }
-
-                /*
-                 * Backend receives:
-                 *
-                 * - user location
-                 * - selected radius
-                 * - selected energy level
-                 */
-                val result =
-                    questRepository.recommendedQuests(
-                        location = location.point,
-                        radiusKm = state.mysteryRadiusKm,
-                        energyLevel = state.mysteryEnergyLevel,
-                    )
-
-                val recommendations =
-                    result
-                        .getOrNull()
-                        ?.map { dto ->
+                        recommendations = freshRecommendations.map { dto ->
                             dto.toRecommendedQuest()
-                        }
-                        ?: emptyList()
-
-                _uiState.update {
-                    it.copy(
-                        recommendations = recommendations,
+                        },
                         mysteryQuestIndex = 0,
                         mysteryRevealed = false,
                         isLoadingMystery = false,
+                        isShowingCachedMystery = true,
+                        mysteryErrorMessage = null,
                     )
                 }
+                return@launch
+            }
 
-            } catch (exception: Exception) {
+            // 2. Keep the latest cached recommendations for offline fallback.
+            val latestRecommendations = mysteryQuestCache.getLatest(
+                energyLevel = energyLevel,
+                radiusKm = radiusKm,
+            )
+
+            // 3. If offline, use cached data even if it has expired.
+            if (!connectivityObserver.isOnline()) {
+
+                if (latestRecommendations != null) {
+                    _uiState.update {
+                        it.copy(
+                            recommendations = latestRecommendations.map { dto ->
+                                dto.toRecommendedQuest()
+                            },
+                            mysteryQuestIndex = 0,
+                            mysteryRevealed = false,
+                            isLoadingMystery = false,
+                            isShowingCachedMystery = true,
+                            mysteryErrorMessage = null,
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            recommendations = emptyList(),
+                            isLoadingMystery = false,
+                            isShowingCachedMystery = false,
+                            mysteryErrorMessage =
+                                "No internet connection and no cached Mystery Quest recommendations.",
+                        )
+                    }
+                }
+
+                return@launch
+            }
+
+            // 4. Online: request fresh recommendations.
+            try {
+                val location = locationProvider.currentLocation()
 
                 _uiState.update {
-                    it.copy(
-                        isLoadingMystery = false,
-                        errorMessage =
-                            exception.message
+                    it.copy(locationSource = location.source)
+                }
+
+                val result = questRepository.recommendedQuests(
+                    location = location.point,
+                    radiusKm = radiusKm,
+                    energyLevel = energyLevel,
+                )
+
+                result.fold(
+                    onSuccess = { recommendations ->
+
+                        mysteryQuestCache.put(
+                            energyLevel = energyLevel,
+                            radiusKm = radiusKm,
+                            recommendations = recommendations,
+                        )
+
+                        _uiState.update {
+                            it.copy(
+                                recommendations = recommendations.map { dto ->
+                                    dto.toRecommendedQuest()
+                                },
+                                mysteryQuestIndex = 0,
+                                mysteryRevealed = false,
+                                isLoadingMystery = false,
+                                isShowingCachedMystery = false,
+                                mysteryErrorMessage = null,
+                            )
+                        }
+                    },
+                    onFailure = { exception ->
+
+                        val isNetworkError =
+                            (exception as? AppException)?.error is AppError.Network
+
+                        if (isNetworkError && latestRecommendations != null) {
+                            _uiState.update {
+                                it.copy(
+                                    recommendations = latestRecommendations.map { dto ->
+                                        dto.toRecommendedQuest()
+                                    },
+                                    mysteryQuestIndex = 0,
+                                    mysteryRevealed = false,
+                                    isLoadingMystery = false,
+                                    isShowingCachedMystery = true,
+                                    mysteryErrorMessage = null,
+                                )
+                            }
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    recommendations = emptyList(),
+                                    isLoadingMystery = false,
+                                    isShowingCachedMystery = false,
+                                    mysteryErrorMessage = exception.message
+                                        ?: "Unable to load Mystery Quest.",
+                                )
+                            }
+                        }
+                    },
+                )
+
+            } catch (exception: Exception) {
+                if (latestRecommendations != null) {
+                    _uiState.update {
+                        it.copy(
+                            recommendations = latestRecommendations.map { dto ->
+                                dto.toRecommendedQuest()
+                            },
+                            mysteryQuestIndex = 0,
+                            mysteryRevealed = false,
+                            isLoadingMystery = false,
+                            isShowingCachedMystery = true,
+                            mysteryErrorMessage = null,
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            recommendations = emptyList(),
+                            isLoadingMystery = false,
+                            isShowingCachedMystery = false,
+                            mysteryErrorMessage = exception.message
                                 ?: "Unable to load Mystery Quest.",
-                    )
+                        )
+                    }
                 }
             }
         }

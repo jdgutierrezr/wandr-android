@@ -93,6 +93,8 @@ dependencies {
 
     // Background sync
     implementation(libs.androidx.work.runtime)
+    // User preferences
+    implementation(libs.androidx.datastore.preferences)
 
     // Supabase
     implementation(platform(libs.supabase.bom))
