@@ -132,7 +132,8 @@ fun HomeScreen(
                     horizontal = 20.dp,
                     vertical = 16.dp,
                 )
-                .padding(bottom = 92.dp),
+                .padding(bottom = 92.dp)
+                .navigationBarsPadding(),
         ) {
 
             // =========================================================
@@ -290,9 +291,7 @@ fun HomeScreen(
         WandrBottomBar(
             selected = MainTab.HOME,
             onSelect = onSelectTab,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding(),
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }

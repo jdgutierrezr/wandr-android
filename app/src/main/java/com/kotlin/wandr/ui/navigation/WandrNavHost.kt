@@ -225,6 +225,9 @@ fun WandrNavHost(
                 onSelectTab = { tab ->
                     navController.openTab(tab)
                 },
+                onOpenTracker = { questId ->
+                    navController.navigate(ActiveQuestDestination(questId))
+                },
             )
         }
 
