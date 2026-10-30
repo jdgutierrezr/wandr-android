@@ -57,6 +57,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.RecommendedQuest
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.kotlin.wandr.ui.components.CoverImage
+import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
 import com.kotlin.wandr.ui.theme.WandrTheme
 import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.components.WandrBottomBar
@@ -70,8 +76,10 @@ import com.kotlin.wandr.ui.components.WandrBottomBar
 fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
     onSelectTab: (MainTab) -> Unit = {},
+    onOpenTracker: (questId: String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var openQuestId by rememberSaveable { mutableStateOf<String?>(null) }
 
     HomeScreen(
         state = state,
@@ -82,7 +90,16 @@ fun HomeRoute(
         onRevealMystery = viewModel::revealMysteryQuest,
         onSkipMystery = viewModel::skipMysteryQuest,
         onSelectTab = onSelectTab,
+        onOpenQuest = { openQuestId = it },
     )
+
+    openQuestId?.let { id ->
+        QuestDetailSheet(
+            questId = id,
+            onDismiss = { openQuestId = null },
+            onOpenTracker = onOpenTracker,
+        )
+    }
 }
 
 // =============================================================
@@ -99,6 +116,7 @@ fun HomeScreen(
     onRevealMystery: () -> Unit,
     onSkipMystery: () -> Unit,
     onSelectTab: (MainTab) -> Unit = {},
+    onOpenQuest: (String) -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -108,12 +126,14 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(
                     horizontal = 20.dp,
                     vertical = 16.dp,
                 )
-                .padding(bottom = 92.dp),
+                .padding(bottom = 92.dp)
+                .navigationBarsPadding(),
         ) {
 
             // =========================================================
@@ -202,6 +222,7 @@ fun HomeScreen(
                     revealed = state.isMysteryRevealed,
                     onReveal = onRevealMystery,
                     onSkip = onSkipMystery,
+                    onOpenQuest = onOpenQuest,
                 )
             } else {
                 MysteryEmptyCard(
@@ -255,6 +276,7 @@ fun HomeScreen(
 
                     QuestCard(
                         quest = quest,
+                        onClick = { onOpenQuest(quest.id) },
                     )
 
                     Spacer(
@@ -269,9 +291,7 @@ fun HomeScreen(
         WandrBottomBar(
             selected = MainTab.HOME,
             onSelect = onSelectTab,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding(),
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
@@ -618,6 +638,7 @@ private fun MysteryQuestCard(
     revealed: Boolean,
     onReveal: () -> Unit,
     onSkip: () -> Unit,
+    onOpenQuest: (String) -> Unit,
 ) {
 
     if (!revealed) {
@@ -632,6 +653,7 @@ private fun MysteryQuestCard(
         MysteryRevealedCard(
             recommendation = recommendation,
             onSkip = onSkip,
+            onOpenQuest = onOpenQuest,
         )
     }
 }
@@ -745,6 +767,7 @@ private fun MysteryHiddenCard(
 private fun MysteryRevealedCard(
     recommendation: RecommendedQuest,
     onSkip: () -> Unit,
+    onOpenQuest: (String) -> Unit,
 ) {
     val quest = recommendation.quest
 
@@ -753,7 +776,10 @@ private fun MysteryRevealedCard(
     ) {
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .clickable { onOpenQuest(quest.id) },
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
@@ -766,6 +792,19 @@ private fun MysteryRevealedCard(
             Column(
                 modifier = Modifier.padding(20.dp),
             ) {
+
+                CoverImage(
+                    imageUrl = quest.coverImageUrl,
+                    contentDescription = quest.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                )
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -899,7 +938,7 @@ private fun MysteryRevealedCard(
         )
 
         Button(
-            onClick = {},
+            onClick = { onOpenQuest(quest.id) },
             modifier = Modifier.fillMaxWidth(),
             shape = CircleShape,
         ) {
@@ -1213,10 +1252,14 @@ private fun TagFilterRow(
 @Composable
 private fun QuestCard(
     quest: Quest,
+    onClick: () -> Unit,
 ) {
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClick = onClick),
 
         colors = CardDefaults.cardColors(
             containerColor =
@@ -1244,39 +1287,13 @@ private fun QuestCard(
                     Alignment.Top,
             ) {
 
-                Box(
+                CoverImage(
+                    imageUrl = quest.coverImageUrl,
+                    contentDescription = quest.title,
                     modifier = Modifier
                         .size(64.dp)
-                        .clip(
-                            MaterialTheme
-                                .shapes
-                                .medium
-                        )
-                        .background(
-                            MaterialTheme
-                                .colorScheme
-                                .primaryContainer
-                        ),
-
-                    contentAlignment =
-                        Alignment.Center,
-                ) {
-
-                    Icon(
-                        imageVector =
-                            Icons.Outlined.LocationOn,
-
-                        contentDescription = null,
-
-                        modifier =
-                            Modifier.size(30.dp),
-
-                        tint =
-                            MaterialTheme
-                                .colorScheme
-                                .primary,
-                    )
-                }
+                        .clip(MaterialTheme.shapes.medium),
+                )
 
                 Spacer(
                     modifier = Modifier.width(

@@ -343,13 +343,24 @@ class HomeViewModel @Inject constructor(
                 return@update state
             }
 
-            val nextIndex =
-                (state.mysteryQuestIndex + 1) % state.recommendations.size
+            val nextIndex = state.mysteryQuestIndex + 1
 
-            state.copy(
-                mysteryQuestIndex = nextIndex,
-                mysteryRevealed = false,
-            )
+            if (nextIndex < state.recommendations.size) {
+                state.copy(
+                    mysteryQuestIndex = nextIndex,
+                    mysteryRevealed = false,
+                )
+            } else {
+                val current = state.mysteryQuest
+                val reshuffled = state.recommendations.shuffled().let { list ->
+                    if (list.size > 1 && list.first() == current) list.drop(1) + list.first() else list
+                }
+                state.copy(
+                    recommendations = reshuffled,
+                    mysteryQuestIndex = 0,
+                    mysteryRevealed = false,
+                )
+            }
         }
     }
 
@@ -502,7 +513,7 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         recommendations = freshRecommendations.map { dto ->
                             dto.toRecommendedQuest()
-                        },
+                        }.shuffled(),
                         mysteryQuestIndex = 0,
                         mysteryRevealed = false,
                         isLoadingMystery = false,
@@ -527,7 +538,7 @@ class HomeViewModel @Inject constructor(
                         it.copy(
                             recommendations = latestRecommendations.map { dto ->
                                 dto.toRecommendedQuest()
-                            },
+                            }.shuffled(),
                             mysteryQuestIndex = 0,
                             mysteryRevealed = false,
                             isLoadingMystery = false,
@@ -577,7 +588,7 @@ class HomeViewModel @Inject constructor(
                             it.copy(
                                 recommendations = recommendations.map { dto ->
                                     dto.toRecommendedQuest()
-                                },
+                                }.shuffled(),
                                 mysteryQuestIndex = 0,
                                 mysteryRevealed = false,
                                 isLoadingMystery = false,
@@ -596,7 +607,7 @@ class HomeViewModel @Inject constructor(
                                 it.copy(
                                     recommendations = latestRecommendations.map { dto ->
                                         dto.toRecommendedQuest()
-                                    },
+                                    }.shuffled(),
                                     mysteryQuestIndex = 0,
                                     mysteryRevealed = false,
                                     isLoadingMystery = false,
@@ -624,7 +635,7 @@ class HomeViewModel @Inject constructor(
                         it.copy(
                             recommendations = latestRecommendations.map { dto ->
                                 dto.toRecommendedQuest()
-                            },
+                            }.shuffled(),
                             mysteryQuestIndex = 0,
                             mysteryRevealed = false,
                             isLoadingMystery = false,

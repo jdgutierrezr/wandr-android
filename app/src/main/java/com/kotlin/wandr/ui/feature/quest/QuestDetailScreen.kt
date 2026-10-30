@@ -79,7 +79,6 @@ fun QuestDetailRoute(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun QuestDetailScreen(
     state: QuestDetailUiState,
@@ -94,81 +93,101 @@ fun QuestDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (detail != null) {
-                PrimaryButton(
-                    text = if (state.isInProgress) "Continue quest" else "Accept Quest",
-                    onClick = if (state.isInProgress) onContinue else onAccept,
-                    isLoading = state.isStarting,
-                    trailingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = WandrTheme.spacing.screen, vertical = WandrTheme.spacing.md),
+                QuestDetailAction(
+                    state = state,
+                    onAccept = onAccept,
+                    onContinue = onContinue,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        if (detail == null) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize().padding(padding),
-            ) {
-                if (state.isLoading) CircularProgressIndicator() else Text("This quest could not be loaded")
-            }
-            return@Scaffold
-        }
+        QuestDetailBody(state = state, modifier = Modifier.padding(padding))
+    }
+}
 
-        val quest = detail.quest
-        LazyColumn(
-            contentPadding = PaddingValues(horizontal = WandrTheme.spacing.screen, vertical = WandrTheme.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.md),
-            modifier = Modifier.fillMaxSize().padding(padding),
+@Composable
+internal fun QuestDetailAction(
+    state: QuestDetailUiState,
+    onAccept: () -> Unit,
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PrimaryButton(
+        text = if (state.isInProgress) "Continue quest" else "Accept Quest",
+        onClick = if (state.isInProgress) onContinue else onAccept,
+        isLoading = state.isStarting,
+        trailingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
+        modifier = modifier.padding(horizontal = WandrTheme.spacing.screen, vertical = WandrTheme.spacing.md),
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun QuestDetailBody(state: QuestDetailUiState, modifier: Modifier = Modifier) {
+    val detail = state.detail
+    if (detail == null) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier.fillMaxSize(),
         ) {
-            if (state.isShowingSavedData) {
-                item { StatusBadge(text = "Offline · showing saved data", style = BadgeStyle.Neutral) }
-            }
-            item {
-                CoverImage(
-                    imageUrl = quest.coverImageUrl,
-                    contentDescription = quest.title,
-                    modifier = Modifier.fillMaxWidth().height(180.dp).clip(MaterialTheme.shapes.large),
-                )
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm)) {
-                    if (quest.tags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(WandrTheme.spacing.xs)) {
-                            quest.tags.forEach { StatusBadge(text = it) }
-                        }
-                    }
-                    Text(quest.title, style = MaterialTheme.typography.headlineSmall)
-                    val placeLine = detail.place?.let { place -> listOfNotNull(place.name, place.address).joinToString(" · ") }
-                        ?: quest.placeName
-                    placeLine?.let { MetaText(it, Icons.Outlined.LocationOn) }
-                    quest.estimatedDurationMin?.let { MetaText("~$it min", Icons.Outlined.Schedule) }
-                    quest.difficultyLevel?.let { MetaText("Difficulty $it/5", Icons.Outlined.Terrain) }
-                    quest.description?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = WandrTheme.colors.textSecondary)
+            if (state.isLoading) CircularProgressIndicator() else Text("This quest could not be loaded")
+        }
+        return
+    }
+
+    val quest = detail.quest
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = WandrTheme.spacing.screen, vertical = WandrTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.md),
+        modifier = modifier.fillMaxSize(),
+    ) {
+        if (state.isShowingSavedData) {
+            item { StatusBadge(text = "Offline · showing saved data", style = BadgeStyle.Neutral) }
+        }
+        item {
+            CoverImage(
+                imageUrl = quest.coverImageUrl,
+                contentDescription = quest.title,
+                modifier = Modifier.fillMaxWidth().height(180.dp).clip(MaterialTheme.shapes.large),
+            )
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(WandrTheme.spacing.sm)) {
+                if (quest.tags.isNotEmpty()) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(WandrTheme.spacing.xs)) {
+                        quest.tags.forEach { StatusBadge(text = it) }
                     }
                 }
+                Text(quest.title, style = MaterialTheme.typography.headlineSmall)
+                val placeLine = detail.place?.let { place -> listOfNotNull(place.name, place.address).joinToString(" · ") }
+                    ?: quest.placeName
+                placeLine?.let { MetaText(it, Icons.Outlined.LocationOn) }
+                quest.estimatedDurationMin?.let { MetaText("~$it min", Icons.Outlined.Schedule) }
+                quest.difficultyLevel?.let { MetaText("Difficulty $it/5", Icons.Outlined.Terrain) }
+                quest.description?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = WandrTheme.colors.textSecondary)
+                }
             }
-            item { SectionLabel("Objectives", trailing = "${detail.objectives.size} steps") }
-            items(detail.objectives, key = { it.id }) { objective ->
-                ObjectiveItem(
-                    title = objective.title,
-                    state = ObjectiveState.Pending,
-                    subtitle = "Step ${objective.orderIndex}",
-                    requiresPhoto = objective.requiresPhoto,
-                )
-            }
-            item {
-                RewardRow(
-                    title = "Rewards",
-                    description = "Unlocked when you finish every step",
-                    xp = quest.pointsReward,
-                    icon = Icons.Rounded.Diamond,
-                )
-            }
+        }
+        item { SectionLabel("Objectives", trailing = "${detail.objectives.size} steps") }
+        items(detail.objectives, key = { it.id }) { objective ->
+            ObjectiveItem(
+                title = objective.title,
+                state = ObjectiveState.Pending,
+                subtitle = "Step ${objective.orderIndex}",
+                requiresPhoto = objective.requiresPhoto,
+            )
+        }
+        item {
+            RewardRow(
+                title = "Rewards",
+                description = "Unlocked when you finish every step",
+                xp = quest.pointsReward,
+                icon = Icons.Rounded.Diamond,
+            )
         }
     }
 }

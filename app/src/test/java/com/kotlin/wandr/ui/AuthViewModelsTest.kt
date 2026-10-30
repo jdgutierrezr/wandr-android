@@ -65,8 +65,45 @@ class AuthViewModelsTest {
         viewModel.onPasswordChange("password123")
         viewModel.submit()
 
-        assertEquals("Enter a valid email", viewModel.uiState.value.errorMessage)
+        assertEquals("Enter a valid email", viewModel.uiState.value.emailError)
         coVerify(exactly = 0) { authRepository.signUp(any(), any(), any()) }
+    }
+
+    @Test
+    fun `sign up shows every field error at once`() {
+        val viewModel = SignUpViewModel(authRepository, FakeConnectivity())
+        viewModel.onPasswordChange("123")
+        viewModel.submit()
+
+        val state = viewModel.uiState.value
+        assertEquals("Enter your name", state.nameError)
+        assertEquals("Enter your email", state.emailError)
+        assertEquals("The password needs at least 6 characters", state.passwordError)
+        coVerify(exactly = 0) { authRepository.signUp(any(), any(), any()) }
+    }
+
+    @Test
+    fun `editing a field clears its error`() {
+        val viewModel = SignUpViewModel(authRepository, FakeConnectivity())
+        viewModel.submit()
+        assertEquals("Enter your name", viewModel.uiState.value.nameError)
+
+        viewModel.onNameChange("Ana")
+
+        assertEquals(null, viewModel.uiState.value.nameError)
+        assertEquals("Enter your email", viewModel.uiState.value.emailError)
+    }
+
+    @Test
+    fun `login rejects an email with a wrong format`() {
+        val viewModel = LoginViewModel(authRepository, FakeConnectivity()).apply {
+            onEmailChange("not-an-email")
+            onPasswordChange("whatever")
+        }
+        viewModel.submit()
+
+        assertEquals("Enter a valid email", viewModel.uiState.value.emailError)
+        coVerify(exactly = 0) { authRepository.signIn(any(), any()) }
     }
 
     @Test

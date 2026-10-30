@@ -77,11 +77,14 @@ fun LoginScreen(
                 label = "Email",
                 leadingIcon = Icons.Outlined.Email,
                 keyboardType = KeyboardType.Email,
+                maxLength = AuthValidation.MAX_EMAIL,
+                error = state.emailError,
                 enabled = !state.isLoading,
             )
             PasswordTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
+                maxLength = AuthValidation.MAX_PASSWORD,
                 imeAction = ImeAction.Done,
                 onImeAction = submit,
                 enabled = !state.isLoading,

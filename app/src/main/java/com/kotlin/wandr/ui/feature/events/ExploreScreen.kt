@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,6 +56,10 @@ import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.ui.components.CoverImage
 import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.components.WandrBottomBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.rememberSaveable
+import com.kotlin.wandr.ui.components.WandrTopBar
+import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
 import com.kotlin.wandr.ui.theme.WandrTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,15 +68,26 @@ import androidx.compose.material.icons.outlined.PersonOutline
 @Composable
 fun ExploreRoute(
     onSelectTab: (MainTab) -> Unit = {},
+    onOpenTracker: (questId: String) -> Unit = {},
     viewModel: ExploreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var openQuestId by rememberSaveable { mutableStateOf<String?>(null) }
 
     ExploreScreen(
         state = state,
         onRefresh = viewModel::refresh,
         onSelectTab = onSelectTab,
+        onOpenQuest = { openQuestId = it },
     )
+
+    openQuestId?.let { id ->
+        QuestDetailSheet(
+            questId = id,
+            onDismiss = { openQuestId = null },
+            onOpenTracker = onOpenTracker,
+        )
+    }
 }
 
 @Composable
@@ -79,6 +95,7 @@ fun ExploreScreen(
     state: ExploreUiState,
     onRefresh: () -> Unit,
     onSelectTab: (MainTab) -> Unit = {},
+    onOpenQuest: (String) -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -107,22 +124,18 @@ fun ExploreScreen(
         ).joinToString(" ").contains(searchQuery, ignoreCase = true)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
+    Scaffold(
+        topBar = { WandrTopBar(title = "Explore") },
+        bottomBar = { WandrBottomBar(selected = MainTab.EXPLORE, onSelect = onSelectTab) },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .padding(bottom = 94.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            ExploreHeader()
-
-            Spacer(Modifier.height(18.dp))
-
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -221,7 +234,7 @@ fun ExploreScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     filteredQuests.take(8).forEach { quest ->
-                        FeaturedQuestCard(quest)
+                        FeaturedQuestCard(quest, onClick = { onOpenQuest(quest.id) })
                     }
                 }
             }
@@ -247,55 +260,6 @@ fun ExploreScreen(
                     TextButton(onClick = onRefresh) { Text("Retry") }
                 }
             }
-        }
-
-        WandrBottomBar(
-            selected = MainTab.EXPLORE,
-            onSelect = onSelectTab,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding(),
-        )
-    }
-}
-
-@Composable
-private fun ExploreHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(WandrTheme.colors.successContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Outlined.Explore,
-                contentDescription = "Wandr",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp),
-            )
-        }
-
-        Spacer(Modifier.width(12.dp))
-
-        Text(
-            "Events & Quests",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
-        IconButton(onClick = {}) {
-            Icon(Icons.Outlined.NotificationsNone, contentDescription = "Notifications")
-        }
-
-        IconButton(onClick = {}) {
-            Icon(Icons.Outlined.PersonOutline, contentDescription = "Profile")
         }
     }
 }
@@ -418,9 +382,12 @@ private fun EventExploreCard(event: Event) {
 }
 
 @Composable
-private fun FeaturedQuestCard(quest: Quest) {
+private fun FeaturedQuestCard(quest: Quest, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.width(250.dp),
+        modifier = Modifier
+            .width(250.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),

@@ -79,6 +79,8 @@ fun SignUpScreen(
                 onValueChange = onNameChange,
                 label = "Name",
                 leadingIcon = Icons.Outlined.Person,
+                maxLength = AuthValidation.MAX_NAME,
+                error = state.nameError,
                 enabled = !state.isLoading,
             )
             WandrTextField(
@@ -87,12 +89,16 @@ fun SignUpScreen(
                 label = "Email",
                 leadingIcon = Icons.Outlined.Email,
                 keyboardType = KeyboardType.Email,
+                maxLength = AuthValidation.MAX_EMAIL,
+                error = state.emailError,
                 enabled = !state.isLoading,
             )
             PasswordTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
-                supportingText = "At least 6 characters",
+                supportingText = "At least ${AuthValidation.MIN_PASSWORD} characters",
+                maxLength = AuthValidation.MAX_PASSWORD,
+                error = state.passwordError,
                 imeAction = ImeAction.Done,
                 onImeAction = submit,
                 enabled = !state.isLoading,

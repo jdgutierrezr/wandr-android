@@ -18,10 +18,15 @@ data class SignUpUiState(
     val name: String = "",
     val email: String = "",
     val password: String = "",
+    val nameError: String? = null,
+    val emailError: String? = null,
+    val passwordError: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSignedUp: Boolean = false,
-)
+) {
+    val hasFieldErrors: Boolean get() = nameError != null || emailError != null || passwordError != null
+}
 
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
@@ -32,19 +37,33 @@ class SignUpViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SignUpUiState())
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
-    fun onNameChange(value: String) = _uiState.update { it.copy(name = value, errorMessage = null) }
+    fun onNameChange(value: String) =
+        _uiState.update { it.copy(name = value, nameError = null, errorMessage = null) }
 
-    fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, errorMessage = null) }
+    fun onEmailChange(value: String) =
+        _uiState.update { it.copy(email = value, emailError = null, errorMessage = null) }
 
-    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, errorMessage = null) }
+    fun onPasswordChange(value: String) =
+        _uiState.update { it.copy(password = value, passwordError = null, errorMessage = null) }
 
     fun onErrorShown() = _uiState.update { it.copy(errorMessage = null) }
 
     fun submit() {
         val state = _uiState.value
         if (state.isLoading) return
-        validate(state)?.let { message ->
-            _uiState.update { it.copy(errorMessage = message) }
+        val checked = state.copy(
+            nameError = AuthValidation.nameError(state.name),
+            emailError = AuthValidation.emailError(state.email),
+            passwordError = AuthValidation.passwordError(state.password),
+        )
+        if (checked.hasFieldErrors) {
+            _uiState.update {
+                it.copy(
+                    nameError = checked.nameError,
+                    emailError = checked.emailError,
+                    passwordError = checked.passwordError,
+                )
+            }
             return
         }
         if (!connectivity.isOnline()) {
@@ -61,17 +80,5 @@ class SignUpViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, errorMessage = error.appError.message) }
                 }
         }
-    }
-
-    private fun validate(state: SignUpUiState): String? = when {
-        state.name.isBlank() -> "Enter your name"
-        !EMAIL_REGEX.matches(state.email.trim()) -> "Enter a valid email"
-        state.password.length < MIN_PASSWORD_LENGTH -> "The password needs at least $MIN_PASSWORD_LENGTH characters"
-        else -> null
-    }
-
-    private companion object {
-        const val MIN_PASSWORD_LENGTH = 6
-        val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }

@@ -17,6 +17,7 @@ import javax.inject.Inject
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
+    val emailError: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isLoggedIn: Boolean = false,
@@ -33,7 +34,8 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, errorMessage = null) }
+    fun onEmailChange(value: String) =
+        _uiState.update { it.copy(email = value, emailError = null, errorMessage = null) }
 
     fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, errorMessage = null) }
 
@@ -42,6 +44,10 @@ class LoginViewModel @Inject constructor(
     fun submit() {
         val state = _uiState.value
         if (!state.canSubmit) return
+        AuthValidation.emailError(state.email)?.let { message ->
+            _uiState.update { it.copy(emailError = message) }
+            return
+        }
         if (!connectivity.isOnline()) {
             _uiState.update { it.copy(errorMessage = AppError.Network.message) }
             return
