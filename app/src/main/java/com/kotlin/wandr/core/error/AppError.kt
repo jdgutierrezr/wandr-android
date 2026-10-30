@@ -3,6 +3,8 @@ package com.kotlin.wandr.core.error
 sealed class AppError(open val message: String) {
     data object Network : AppError("No internet connection")
 
+    data object NoSpace : AppError("There is not enough space on the phone")
+
     data object Unauthorized : AppError("Your session expired. Please log in again")
 
     data class Server(override val message: String) : AppError(message)

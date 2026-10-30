@@ -3,19 +3,21 @@ package com.kotlin.wandr.ui.feature.quest
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
+import com.kotlin.wandr.core.storage.PhotoGallery
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
-import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.LiveDistance
 import com.kotlin.wandr.domain.model.distanceMetersTo
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
+import com.kotlin.wandr.domain.model.StepOutcome
 import com.kotlin.wandr.domain.model.StepRisk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -53,17 +55,24 @@ data class ActiveQuestUiState(
     val dropoff: QuestDropoffReport? = null,
     val liveDistance: LiveDistance? = null,
     val locationStatus: LocationStatus = LocationStatus.OFF,
+    /** Steps checked offline, waiting to be sent. */
+    val pendingObjectiveIds: Set<String> = emptySet(),
+    val notice: String? = null,
+    /** Photo that could not be kept offline: the user decides what to do with it. */
+    val unsavedPhoto: UnsavedPhoto? = null,
 ) {
     fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
 }
+
+class UnsavedPhoto(val jpeg: ByteArray)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ActiveQuestViewModel @Inject constructor(
     private val questRepository: QuestRepository,
-    private val storageRepository: StorageRepository,
     private val analyticsRepository: AnalyticsRepository,
     private val locationProvider: LocationProvider,
+    private val photoGallery: PhotoGallery,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveQuestUiState())
@@ -87,6 +96,10 @@ class ActiveQuestViewModel @Inject constructor(
                     }
                 }
             }
+            .launchIn(viewModelScope)
+
+        questRepository.pendingObjectiveIds()
+            .onEach { ids -> _uiState.update { it.copy(pendingObjectiveIds = ids) } }
             .launchIn(viewModelScope)
 
         loadDropoffHints()
@@ -145,20 +158,41 @@ class ActiveQuestViewModel @Inject constructor(
         }
         _uiState.update { it.copy(submittingObjectiveId = objectiveId, errorMessage = null) }
         viewModelScope.launch {
-            val result = runCatching {
-                val photoPath = photoJpeg?.let {
-                    storageRepository.uploadQuestPhoto(questId, objectiveId, it).getOrThrow()
-                }
-                questRepository.completeObjective(questId, objectiveId, photoPath).getOrThrow()
-            }
+            val result = questRepository.checkObjective(questId, objectiveId, photoJpeg)
             _uiState.update { state ->
                 result.fold(
-                    onSuccess = { state.copy(submittingObjectiveId = null, lastResult = it) },
-                    onFailure = { state.copy(submittingObjectiveId = null, errorMessage = it.appError.message) },
+                    onSuccess = { outcome ->
+                        when (outcome) {
+                            is StepOutcome.Synced -> state.copy(submittingObjectiveId = null, lastResult = outcome.result)
+                            StepOutcome.Queued -> state.copy(submittingObjectiveId = null, notice = SAVED_OFFLINE)
+                        }
+                    },
+                    onFailure = { error ->
+                        if (error.appError == AppError.NoSpace && photoJpeg != null) {
+                            state.copy(submittingObjectiveId = null, unsavedPhoto = UnsavedPhoto(photoJpeg))
+                        } else {
+                            state.copy(submittingObjectiveId = null, errorMessage = error.appError.message)
+                        }
+                    },
                 )
             }
         }
     }
+
+    fun savePhotoToGallery() {
+        val photo = _uiState.value.unsavedPhoto ?: return
+        _uiState.update { it.copy(unsavedPhoto = null) }
+        viewModelScope.launch {
+            val saved = photoGallery.save(photo.jpeg)
+            _uiState.update {
+                it.copy(notice = if (saved) SAVED_TO_GALLERY else "The photo could not be saved")
+            }
+        }
+    }
+
+    fun dismissUnsavedPhoto() = _uiState.update { it.copy(unsavedPhoto = null) }
+
+    fun onNoticeShown() = _uiState.update { it.copy(notice = null) }
 
     fun completeObjectiveWithPhoto(questId: String, objectiveId: String, photo: Bitmap) {
         if (_uiState.value.submittingObjectiveId != null) return
@@ -187,6 +221,8 @@ class ActiveQuestViewModel @Inject constructor(
     private companion object {
         const val DISTANCE_STEP_METERS = 10f
         const val GPS_INTERVAL_MS = 5_000L
+        const val SAVED_OFFLINE = "Saved on the phone. It will sync when you're back online"
+        const val SAVED_TO_GALLERY = "Photo saved in your gallery. Check the step again when you're online"
     }
 }
 

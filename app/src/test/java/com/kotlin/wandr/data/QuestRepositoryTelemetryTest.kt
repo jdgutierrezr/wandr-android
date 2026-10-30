@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.time.Clock
 
 /** BQ2: every complete_objective call is measured. */
 class QuestRepositoryTelemetryTest {
@@ -32,6 +33,12 @@ class QuestRepositoryTelemetryTest {
         strategies = StrategySelector(FakeConnectivity()),
         eventBus = AppEventBus(),
         telemetry = telemetry,
+        pendingDao = mockk(relaxed = true),
+        photoStore = mockk(relaxed = true),
+        storage = mockk(relaxed = true),
+        connectivity = FakeConnectivity(),
+        syncScheduler = mockk(relaxed = true),
+        clock = Clock.systemUTC(),
     )
 
     @Test

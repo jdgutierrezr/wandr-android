@@ -124,6 +124,12 @@ fun ActiveQuestRoute(
     LaunchedEffect(abandonRequested, quest, state.abandoningQuestId) {
         if (abandonRequested && quest == null && state.abandoningQuestId == null) onBack()
     }
+    LaunchedEffect(state.notice) {
+        state.notice?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onNoticeShown()
+        }
+    }
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
             abandonRequested = false
@@ -166,6 +172,10 @@ fun ActiveQuestRoute(
             viewModel.onResultShown()
             if (finished) onBack()
         },
+        pendingObjectiveIds = state.pendingObjectiveIds,
+        hasUnsavedPhoto = state.unsavedPhoto != null,
+        onSavePhotoToGallery = viewModel::savePhotoToGallery,
+        onDismissUnsavedPhoto = viewModel::dismissUnsavedPhoto,
     )
 
     if (askToAbandon) {
@@ -207,6 +217,10 @@ fun ActiveQuestScreen(
     onNavigate: (Place) -> Unit,
     onAbandon: () -> Unit,
     onResultShown: () -> Unit,
+    pendingObjectiveIds: Set<String> = emptySet(),
+    hasUnsavedPhoto: Boolean = false,
+    onSavePhotoToGallery: () -> Unit = {},
+    onDismissUnsavedPhoto: () -> Unit = {},
 ) {
     Scaffold(
         topBar = { WandrTopBar(title = "Active Quest", onBack = onBack) },
@@ -230,6 +244,9 @@ fun ActiveQuestScreen(
             ) {
                 if (isShowingSavedData) {
                     item { StatusBadge(text = "Offline · your progress is saved on the phone", style = BadgeStyle.Neutral) }
+                }
+                if (quest.objectives.any { it.id in pendingObjectiveIds }) {
+                    item { StatusBadge(text = "Pending sync · it will be sent when you're online", style = BadgeStyle.Neutral) }
                 }
                 item { ProgressHeader(quest) }
                 if (liveDistance?.hasArrived == true) {
@@ -263,6 +280,7 @@ fun ActiveQuestScreen(
                                 else -> ObjectiveState.Pending
                             },
                             subtitle = when {
+                                isDone && objective.id in pendingObjectiveIds -> "Done · pending sync"
                                 isDone -> "Done"
                                 isNext && objective.requiresPhoto -> "Tap to take the photo"
                                 isNext -> "Tap when you finish this step"
@@ -287,6 +305,21 @@ fun ActiveQuestScreen(
     }
 
     if (lastResult != null) ResultDialog(lastResult, onDismiss = onResultShown)
+
+    if (hasUnsavedPhoto) {
+        AlertDialog(
+            onDismissRequest = onDismissUnsavedPhoto,
+            title = { Text("Not enough space") },
+            text = {
+                Text(
+                    "The phone is too full to keep this photo until you're back online. " +
+                        "You can save it in your public gallery, or check the step again when you have internet.",
+                )
+            },
+            confirmButton = { TextButton(onClick = onSavePhotoToGallery) { Text("Save to gallery") } },
+            dismissButton = { TextButton(onClick = onDismissUnsavedPhoto) { Text("Cancel") } },
+        )
+    }
 }
 
 @Composable

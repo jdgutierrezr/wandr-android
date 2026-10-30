@@ -91,6 +91,8 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Background sync
+    implementation(libs.androidx.work.runtime)
     // User preferences
     implementation(libs.androidx.datastore.preferences)
 
