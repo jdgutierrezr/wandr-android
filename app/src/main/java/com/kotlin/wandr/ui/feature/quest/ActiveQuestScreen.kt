@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,7 +68,6 @@ import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.components.XpBadge
 import com.kotlin.wandr.ui.theme.WandrTheme
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 import java.time.Instant
 
 /**
@@ -102,13 +100,12 @@ fun ActiveQuestRoute(
         val objectiveId = photoObjectiveId
         photoObjectiveId = null
         if (bitmap != null && objectiveId != null) {
-            viewModel.completeObjective(questId, objectiveId, bitmap.toJpeg())
+            viewModel.completeObjectiveWithPhoto(questId, objectiveId, bitmap)
         }
     }
 
     val quest = state.quests.firstOrNull { it.questId == questId }
 
-    // ---------- Context-aware: live distance from the GPS ----------
     var hasLocationPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         hasLocationPermission = granted.values.any { it }
@@ -292,7 +289,6 @@ fun ActiveQuestScreen(
     if (lastResult != null) ResultDialog(lastResult, onDismiss = onResultShown)
 }
 
-/** Context-aware: shown when the GPS says the user is at the quest's place. */
 @Composable
 private fun ArrivedBanner(nextStep: String?) {
     WandrCard(
@@ -311,10 +307,6 @@ private fun ArrivedBanner(nextStep: String?) {
     }
 }
 
-/**
- * Smart feature: "3 of 4 people who gave up this quest stopped at this step". Uses the BQ8
- * drop-off data to encourage the user right where others quit.
- */
 @Composable
 private fun DropoffHint(risk: StepRisk, isNext: Boolean, modifier: Modifier = Modifier) {
     WandrCard(
@@ -410,7 +402,6 @@ private fun ResultDialog(result: ObjectiveResult, onDismiss: () -> Unit) {
     )
 }
 
-/** Opens the maps app at the place. Returns false if no app can show a map. */
 private fun Context.openDirections(place: Place): Boolean {
     val lat = place.location.latitude
     val lng = place.location.longitude
@@ -430,11 +421,6 @@ private val LOCATION_PERMISSIONS = arrayOf(
 
 private fun Context.hasLocationPermission(): Boolean = LOCATION_PERMISSIONS.any {
     ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-}
-
-private fun Bitmap.toJpeg(): ByteArray = ByteArrayOutputStream().use { out ->
-    compress(Bitmap.CompressFormat.JPEG, 85, out)
-    out.toByteArray()
 }
 
 @Preview(showBackground = true, heightDp = 900)
