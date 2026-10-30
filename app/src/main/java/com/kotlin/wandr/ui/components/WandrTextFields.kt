@@ -46,10 +46,12 @@ fun WandrTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingIcon: @Composable (() -> Unit)? = null,
     supportingText: String? = null,
+    maxLength: Int? = null,
+    error: String? = null,
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { onValueChange(if (maxLength != null) it.take(maxLength) else it) },
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
         leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = null) } },
@@ -57,7 +59,8 @@ fun WandrTextField(
         enabled = enabled,
         visualTransformation = visualTransformation,
         trailingIcon = trailingIcon,
-        supportingText = supportingText?.let { { Text(it) } },
+        isError = error != null,
+        supportingText = (error ?: supportingText)?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
         keyboardActions = KeyboardActions(onAny = { onImeAction() }),
         shape = MaterialTheme.shapes.medium,
@@ -76,6 +79,8 @@ fun PasswordTextField(
     onImeAction: () -> Unit = {},
     enabled: Boolean = true,
     supportingText: String? = null,
+    maxLength: Int? = null,
+    error: String? = null,
 ) {
     var isVisible by rememberSaveable { mutableStateOf(false) }
     WandrTextField(
@@ -89,6 +94,8 @@ fun PasswordTextField(
         onImeAction = onImeAction,
         enabled = enabled,
         supportingText = supportingText,
+        maxLength = maxLength,
+        error = error,
         visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = { isVisible = !isVisible }) {
