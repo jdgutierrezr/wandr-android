@@ -1,22 +1,26 @@
 package com.kotlin.wandr.ui.feature.quest
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
+import com.kotlin.wandr.core.storage.PhotoGallery
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
-import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.domain.model.ActiveQuest
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.LiveDistance
 import com.kotlin.wandr.domain.model.distanceMetersTo
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
+import com.kotlin.wandr.domain.model.StepOutcome
 import com.kotlin.wandr.domain.model.StepRisk
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,20 +33,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
-/** What the GPS part of Active Quest is doing, so the screen never stays silent. */
 enum class LocationStatus {
-    /** Not following the GPS (no permission, or the screen is not visible). */
     OFF,
-
-    /** Waiting for the first reading. */
     SEARCHING,
-
-    /** The phone has no position at all (location turned off, or the emulator has none set). */
     NO_FIX,
-
-    /** [ActiveQuestUiState.liveDistance] is up to date. */
     LIVE,
 }
 
@@ -54,23 +52,27 @@ data class ActiveQuestUiState(
     val abandoningQuestId: String? = null,
     val lastResult: ObjectiveResult? = null,
     val errorMessage: String? = null,
-    /** Smart feature: BQ8 drop-off data, used to warn on the riskiest step. Null = no hint. */
     val dropoff: QuestDropoffReport? = null,
-    /** Context-aware: distance from the user's GPS to the quest's place. Null = unknown. */
     val liveDistance: LiveDistance? = null,
     val locationStatus: LocationStatus = LocationStatus.OFF,
+    /** Steps checked offline, waiting to be sent. */
+    val pendingObjectiveIds: Set<String> = emptySet(),
+    val notice: String? = null,
+    /** Photo that could not be kept offline: the user decides what to do with it. */
+    val unsavedPhoto: UnsavedPhoto? = null,
 ) {
-    /** The step of [questId] where most people give up, or null if there is no data. */
     fun riskiestStepFor(questId: String): StepRisk? = dropoff?.riskiestStepFor(questId)
 }
+
+class UnsavedPhoto(val jpeg: ByteArray)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ActiveQuestViewModel @Inject constructor(
     private val questRepository: QuestRepository,
-    private val storageRepository: StorageRepository,
     private val analyticsRepository: AnalyticsRepository,
     private val locationProvider: LocationProvider,
+    private val photoGallery: PhotoGallery,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveQuestUiState())
@@ -96,14 +98,13 @@ class ActiveQuestViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        questRepository.pendingObjectiveIds()
+            .onEach { ids -> _uiState.update { it.copy(pendingObjectiveIds = ids) } }
+            .launchIn(viewModelScope)
+
         loadDropoffHints()
     }
 
-    /**
-     * Smart feature: reuses the BQ8 analytics (where users abandon quests) to warn the user on
-     * the step where most people give up. It is only a hint, so a failure is silent: no data
-     * or no connection simply means no hint.
-     */
     private fun loadDropoffHints() {
         viewModelScope.launch {
             analyticsRepository.questDropoff()
@@ -115,11 +116,6 @@ class ActiveQuestViewModel @Inject constructor(
 
     private var distanceJob: Job? = null
 
-    /**
-     * Context-aware + sensor: follows the phone's GPS and keeps [ActiveQuestUiState.liveDistance]
-     * up to date. The screen calls it when it is visible and calls [stopTrackingDistance] when it
-     * leaves, so the GPS does not drain the battery in the background.
-     */
     fun trackDistanceTo(destination: GeoPoint) {
         distanceJob?.cancel()
         _uiState.update { it.copy(locationStatus = LocationStatus.SEARCHING) }
@@ -145,7 +141,6 @@ class ActiveQuestViewModel @Inject constructor(
         _uiState.update { it.copy(locationStatus = LocationStatus.OFF) }
     }
 
-    /** No permission or no fix (FALLBACK = center of Bogota) must not pretend to know the distance. */
     private fun UserLocation.distanceTo(destination: GeoPoint): LiveDistance? = when (source) {
         UserLocation.Source.FALLBACK -> null
         UserLocation.Source.LAST_KNOWN -> LiveDistance(point.distanceMetersTo(destination), isApproximate = true)
@@ -163,18 +158,48 @@ class ActiveQuestViewModel @Inject constructor(
         }
         _uiState.update { it.copy(submittingObjectiveId = objectiveId, errorMessage = null) }
         viewModelScope.launch {
-            val result = runCatching {
-                val photoPath = photoJpeg?.let {
-                    storageRepository.uploadQuestPhoto(questId, objectiveId, it).getOrThrow()
-                }
-                questRepository.completeObjective(questId, objectiveId, photoPath).getOrThrow()
-            }
+            val result = questRepository.checkObjective(questId, objectiveId, photoJpeg)
             _uiState.update { state ->
                 result.fold(
-                    onSuccess = { state.copy(submittingObjectiveId = null, lastResult = it) },
-                    onFailure = { state.copy(submittingObjectiveId = null, errorMessage = it.appError.message) },
+                    onSuccess = { outcome ->
+                        when (outcome) {
+                            is StepOutcome.Synced -> state.copy(submittingObjectiveId = null, lastResult = outcome.result)
+                            StepOutcome.Queued -> state.copy(submittingObjectiveId = null, notice = SAVED_OFFLINE)
+                        }
+                    },
+                    onFailure = { error ->
+                        if (error.appError == AppError.NoSpace && photoJpeg != null) {
+                            state.copy(submittingObjectiveId = null, unsavedPhoto = UnsavedPhoto(photoJpeg))
+                        } else {
+                            state.copy(submittingObjectiveId = null, errorMessage = error.appError.message)
+                        }
+                    },
                 )
             }
+        }
+    }
+
+    fun savePhotoToGallery() {
+        val photo = _uiState.value.unsavedPhoto ?: return
+        _uiState.update { it.copy(unsavedPhoto = null) }
+        viewModelScope.launch {
+            val saved = photoGallery.save(photo.jpeg)
+            _uiState.update {
+                it.copy(notice = if (saved) SAVED_TO_GALLERY else "The photo could not be saved")
+            }
+        }
+    }
+
+    fun dismissUnsavedPhoto() = _uiState.update { it.copy(unsavedPhoto = null) }
+
+    fun onNoticeShown() = _uiState.update { it.copy(notice = null) }
+
+    fun completeObjectiveWithPhoto(questId: String, objectiveId: String, photo: Bitmap) {
+        if (_uiState.value.submittingObjectiveId != null) return
+        viewModelScope.launch {
+            // compressing on the main thread freezes the screen
+            val jpeg = withContext(Dispatchers.Default) { photo.toJpeg() }
+            completeObjective(questId, objectiveId, jpeg)
         }
     }
 
@@ -194,8 +219,14 @@ class ActiveQuestViewModel @Inject constructor(
     fun onErrorShown() = _uiState.update { it.copy(errorMessage = null) }
 
     private companion object {
-        /** New GPS readings only after moving this much or waiting this long (QS5: battery). */
         const val DISTANCE_STEP_METERS = 10f
         const val GPS_INTERVAL_MS = 5_000L
+        const val SAVED_OFFLINE = "Saved on the phone. It will sync when you're back online"
+        const val SAVED_TO_GALLERY = "Photo saved in your gallery. Check the step again when you're online"
     }
+}
+
+private fun Bitmap.toJpeg(): ByteArray = ByteArrayOutputStream().use { out ->
+    compress(Bitmap.CompressFormat.JPEG, 85, out)
+    out.toByteArray()
 }

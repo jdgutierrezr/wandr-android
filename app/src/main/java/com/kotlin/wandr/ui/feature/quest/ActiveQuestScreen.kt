@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -69,7 +68,6 @@ import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.components.XpBadge
 import com.kotlin.wandr.ui.theme.WandrTheme
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 import java.time.Instant
 
 /**
@@ -102,13 +100,12 @@ fun ActiveQuestRoute(
         val objectiveId = photoObjectiveId
         photoObjectiveId = null
         if (bitmap != null && objectiveId != null) {
-            viewModel.completeObjective(questId, objectiveId, bitmap.toJpeg())
+            viewModel.completeObjectiveWithPhoto(questId, objectiveId, bitmap)
         }
     }
 
     val quest = state.quests.firstOrNull { it.questId == questId }
 
-    // ---------- Context-aware: live distance from the GPS ----------
     var hasLocationPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
         hasLocationPermission = granted.values.any { it }
@@ -126,6 +123,12 @@ fun ActiveQuestRoute(
     // After giving up, the quest leaves the active list: go back
     LaunchedEffect(abandonRequested, quest, state.abandoningQuestId) {
         if (abandonRequested && quest == null && state.abandoningQuestId == null) onBack()
+    }
+    LaunchedEffect(state.notice) {
+        state.notice?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onNoticeShown()
+        }
     }
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
@@ -169,6 +172,10 @@ fun ActiveQuestRoute(
             viewModel.onResultShown()
             if (finished) onBack()
         },
+        pendingObjectiveIds = state.pendingObjectiveIds,
+        hasUnsavedPhoto = state.unsavedPhoto != null,
+        onSavePhotoToGallery = viewModel::savePhotoToGallery,
+        onDismissUnsavedPhoto = viewModel::dismissUnsavedPhoto,
     )
 
     if (askToAbandon) {
@@ -210,6 +217,10 @@ fun ActiveQuestScreen(
     onNavigate: (Place) -> Unit,
     onAbandon: () -> Unit,
     onResultShown: () -> Unit,
+    pendingObjectiveIds: Set<String> = emptySet(),
+    hasUnsavedPhoto: Boolean = false,
+    onSavePhotoToGallery: () -> Unit = {},
+    onDismissUnsavedPhoto: () -> Unit = {},
 ) {
     Scaffold(
         topBar = { WandrTopBar(title = "Active Quest", onBack = onBack) },
@@ -233,6 +244,9 @@ fun ActiveQuestScreen(
             ) {
                 if (isShowingSavedData) {
                     item { StatusBadge(text = "Offline · your progress is saved on the phone", style = BadgeStyle.Neutral) }
+                }
+                if (quest.objectives.any { it.id in pendingObjectiveIds }) {
+                    item { StatusBadge(text = "Pending sync · it will be sent when you're online", style = BadgeStyle.Neutral) }
                 }
                 item { ProgressHeader(quest) }
                 if (liveDistance?.hasArrived == true) {
@@ -266,6 +280,7 @@ fun ActiveQuestScreen(
                                 else -> ObjectiveState.Pending
                             },
                             subtitle = when {
+                                isDone && objective.id in pendingObjectiveIds -> "Done · pending sync"
                                 isDone -> "Done"
                                 isNext && objective.requiresPhoto -> "Tap to take the photo"
                                 isNext -> "Tap when you finish this step"
@@ -290,9 +305,23 @@ fun ActiveQuestScreen(
     }
 
     if (lastResult != null) ResultDialog(lastResult, onDismiss = onResultShown)
+
+    if (hasUnsavedPhoto) {
+        AlertDialog(
+            onDismissRequest = onDismissUnsavedPhoto,
+            title = { Text("Not enough space") },
+            text = {
+                Text(
+                    "The phone is too full to keep this photo until you're back online. " +
+                        "You can save it in your public gallery, or check the step again when you have internet.",
+                )
+            },
+            confirmButton = { TextButton(onClick = onSavePhotoToGallery) { Text("Save to gallery") } },
+            dismissButton = { TextButton(onClick = onDismissUnsavedPhoto) { Text("Cancel") } },
+        )
+    }
 }
 
-/** Context-aware: shown when the GPS says the user is at the quest's place. */
 @Composable
 private fun ArrivedBanner(nextStep: String?) {
     WandrCard(
@@ -311,10 +340,6 @@ private fun ArrivedBanner(nextStep: String?) {
     }
 }
 
-/**
- * Smart feature: "3 of 4 people who gave up this quest stopped at this step". Uses the BQ8
- * drop-off data to encourage the user right where others quit.
- */
 @Composable
 private fun DropoffHint(risk: StepRisk, isNext: Boolean, modifier: Modifier = Modifier) {
     WandrCard(
@@ -410,7 +435,6 @@ private fun ResultDialog(result: ObjectiveResult, onDismiss: () -> Unit) {
     )
 }
 
-/** Opens the maps app at the place. Returns false if no app can show a map. */
 private fun Context.openDirections(place: Place): Boolean {
     val lat = place.location.latitude
     val lng = place.location.longitude
@@ -430,11 +454,6 @@ private val LOCATION_PERMISSIONS = arrayOf(
 
 private fun Context.hasLocationPermission(): Boolean = LOCATION_PERMISSIONS.any {
     ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-}
-
-private fun Bitmap.toJpeg(): ByteArray = ByteArrayOutputStream().use { out ->
-    compress(Bitmap.CompressFormat.JPEG, 85, out)
-    out.toByteArray()
 }
 
 @Preview(showBackground = true, heightDp = 900)

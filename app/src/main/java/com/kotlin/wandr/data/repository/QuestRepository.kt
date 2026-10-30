@@ -1,14 +1,26 @@
 package com.kotlin.wandr.data.repository
 
+import com.kotlin.wandr.core.error.AppError
+import com.kotlin.wandr.core.error.ErrorMapper
+import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.error.safeCall
 import com.kotlin.wandr.core.event.AppEvent
 import com.kotlin.wandr.core.event.AppEventBus
+import com.kotlin.wandr.core.network.ConnectivityObserver
+import com.kotlin.wandr.core.storage.PendingPhotoStore
 import com.kotlin.wandr.core.strategy.FetchPolicy
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.core.strategy.StrategySelector
 import com.kotlin.wandr.core.strategy.requireData
+import com.kotlin.wandr.core.sync.QuestSyncScheduler
+import com.kotlin.wandr.core.telemetry.TelemetryEvents
+import com.kotlin.wandr.data.local.dao.PendingActionDao
 import com.kotlin.wandr.data.local.dao.PlaceDao
 import com.kotlin.wandr.data.local.dao.QuestDao
+import com.kotlin.wandr.data.local.entity.CompletionEntity
+import com.kotlin.wandr.data.local.entity.ObjectiveCompletionEntity
+import com.kotlin.wandr.data.local.entity.PendingActionType
+import com.kotlin.wandr.data.local.entity.PendingQuestActionEntity
 import com.kotlin.wandr.data.mapper.tagEntities
 import com.kotlin.wandr.data.mapper.toDomain
 import com.kotlin.wandr.data.mapper.toEntity
@@ -20,15 +32,22 @@ import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.QuestDetail
+import com.kotlin.wandr.domain.model.StepOutcome
+import com.kotlin.wandr.domain.model.SyncResult
 import com.kotlin.wandr.domain.model.Tier
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.TimeSource
 
 interface QuestRepository {
     fun nearbyQuests(
@@ -51,11 +70,20 @@ interface QuestRepository {
 
     fun activeQuests(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<ActiveQuest>>>
 
+    /** Without internet it is saved on the phone and sent later. */
     suspend fun startQuest(questId: String): Result<Unit>
 
     suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String? = null): Result<ObjectiveResult>
 
+    /** Uploads the photo and checks the step, or saves both on the phone when offline. */
+    suspend fun checkObjective(questId: String, objectiveId: String, photoJpeg: ByteArray?): Result<StepOutcome>
+
+    /** Without internet it is saved on the phone and sent later. */
     suspend fun abandonQuest(questId: String): Result<Unit>
+
+    fun pendingObjectiveIds(): Flow<Set<String>>
+
+    suspend fun syncPending(): SyncResult
 
     companion object {
         const val DEFAULT_RADIUS_KM = 5.0
@@ -69,7 +97,16 @@ class QuestRepositoryImpl @Inject constructor(
     private val placeDao: PlaceDao,
     private val strategies: StrategySelector,
     private val eventBus: AppEventBus,
+    private val telemetry: TelemetryRepository,
+    private val pendingDao: PendingActionDao,
+    private val photoStore: PendingPhotoStore,
+    private val storage: StorageRepository,
+    private val connectivity: ConnectivityObserver,
+    private val syncScheduler: QuestSyncScheduler,
+    private val clock: Clock,
 ) : QuestRepository {
+
+    private val syncLock = Mutex()
 
     override fun nearbyQuests(location: GeoPoint, radiusKm: Double, policy: FetchPolicy) =
         strategies.select(policy).fetch(
@@ -123,13 +160,47 @@ class QuestRepositoryImpl @Inject constructor(
         isEmpty = { false },
     )
 
-    override suspend fun startQuest(questId: String) = safeCall {
-        remote.startQuest(questId)
-        refreshActive()
+    override suspend fun startQuest(questId: String): Result<Unit> = safeCall {
+        if (!mustQueue()) {
+            try {
+                remote.startQuest(questId)
+                refreshActive()
+                return@safeCall
+            } catch (e: Exception) {
+                if (!e.isNetworkError()) throw e
+            }
+        }
+        queue(PendingQuestActionEntity(type = PendingActionType.START, questId = questId, createdAtMillis = clock.millis()))
     }
 
     override suspend fun completeObjective(questId: String, objectiveId: String, photoPath: String?) = safeCall {
-        val result = remote.completeObjective(questId, objectiveId, photoPath).toDomain()
+        finishObjective(questId, objectiveId, photoPath)
+    }
+
+    override suspend fun checkObjective(questId: String, objectiveId: String, photoJpeg: ByteArray?): Result<StepOutcome> = safeCall {
+        if (!mustQueue()) {
+            try {
+                val photoPath = photoJpeg?.let { storage.uploadQuestPhoto(questId, objectiveId, it).getOrThrow() }
+                return@safeCall StepOutcome.Synced(finishObjective(questId, objectiveId, photoPath))
+            } catch (e: Exception) {
+                if (!e.isNetworkError()) throw e
+            }
+        }
+        val photoFile = photoJpeg?.let { photoStore.save(it) }
+        queue(
+            PendingQuestActionEntity(
+                type = PendingActionType.COMPLETE,
+                questId = questId,
+                objectiveId = objectiveId,
+                photoFile = photoFile,
+                createdAtMillis = clock.millis(),
+            )
+        )
+        StepOutcome.Queued
+    }
+
+    private suspend fun finishObjective(questId: String, objectiveId: String, photoPath: String?): ObjectiveResult {
+        val result = timedCompleteObjective(questId, objectiveId, photoPath).toDomain()
         refreshActive()
         if (result.questCompleted) {
             eventBus.publish(
@@ -143,13 +214,110 @@ class QuestRepositoryImpl @Inject constructor(
                 )
             )
         }
-        result
+        return result
     }
 
-    override suspend fun abandonQuest(questId: String) = safeCall {
-        remote.abandonQuest(questId)
-        refreshActive()
+    private suspend fun timedCompleteObjective(questId: String, objectiveId: String, photoPath: String?) =
+        TimeSource.Monotonic.markNow().let { start ->
+            val response = runCatching { remote.completeObjective(questId, objectiveId, photoPath) }
+            if (response.exceptionOrNull() !is CancellationException) {
+                telemetry.record(
+                    name = TelemetryEvents.QUEST_STEP_RESPONSE,
+                    durationMs = start.elapsedNow().inWholeMilliseconds,
+                    success = response.isSuccess,
+                    metadata = mapOf(
+                        "quest_id" to questId,
+                        "objective_id" to objectiveId,
+                        "with_photo" to (photoPath != null).toString(),
+                    ),
+                )
+            }
+            response.getOrThrow()
+        }
+
+    override suspend fun abandonQuest(questId: String): Result<Unit> = safeCall {
+        if (!mustQueue()) {
+            try {
+                remote.abandonQuest(questId)
+                refreshActive()
+                return@safeCall
+            } catch (e: Exception) {
+                if (!e.isNetworkError()) throw e
+            }
+        }
+        queue(PendingQuestActionEntity(type = PendingActionType.ABANDON, questId = questId, createdAtMillis = clock.millis()))
     }
+
+    override fun pendingObjectiveIds(): Flow<Set<String>> =
+        pendingDao.observeAll().map { actions -> actions.mapNotNull { it.objectiveId }.toSet() }
+
+    override suspend fun syncPending(): SyncResult = syncLock.withLock {
+        while (true) {
+            val action = pendingDao.oldest() ?: break
+            val error = safeCall { send(action) }.exceptionOrNull()?.appError
+            val retryLater = error == AppError.Network || error == AppError.Unauthorized
+            if (retryLater && action.attempts < MAX_ATTEMPTS) {
+                pendingDao.addAttempt(action.id)
+                return@withLock SyncResult.RETRY
+            }
+            // sent, or the server rejected it for good (e.g. "Quest is not in progress")
+            pendingDao.delete(action.id)
+            action.photoFile?.let { photoStore.delete(it) }
+        }
+        runCatching { refreshActive() }
+        SyncResult.DONE
+    }
+
+    private suspend fun send(action: PendingQuestActionEntity) {
+        when (action.type) {
+            PendingActionType.START -> remote.startQuest(action.questId)
+            PendingActionType.ABANDON -> remote.abandonQuest(action.questId)
+            PendingActionType.COMPLETE -> {
+                val objectiveId = action.objectiveId ?: return
+                val photo = action.photoFile?.let { photoStore.read(it) }
+                val photoPath = photo?.let { storage.uploadQuestPhoto(action.questId, objectiveId, it).getOrThrow() }
+                finishObjective(action.questId, objectiveId, photoPath)
+            }
+        }
+    }
+
+    private suspend fun mustQueue() = !connectivity.isOnline() || pendingDao.count() > 0
+
+    private suspend fun queue(action: PendingQuestActionEntity) {
+        pendingDao.insert(action)
+        applyLocally(action)
+        syncScheduler.schedule()
+    }
+
+    private suspend fun applyLocally(action: PendingQuestActionEntity) {
+        when (action.type) {
+            PendingActionType.START -> {
+                if (questDao.pendingCompletionId(action.questId) != null) return
+                val quest = questDao.questById(action.questId) ?: return
+                questDao.upsertCompletions(
+                    listOf(
+                        CompletionEntity(
+                            id = "local-${action.questId}",
+                            questId = quest.id,
+                            questTitle = quest.title,
+                            pointsReward = quest.pointsReward,
+                            status = "pending",
+                            startedAtMillis = action.createdAtMillis,
+                            completedAtMillis = null,
+                        )
+                    )
+                )
+            }
+            PendingActionType.COMPLETE -> {
+                val completionId = questDao.pendingCompletionId(action.questId) ?: return
+                val objectiveId = action.objectiveId ?: return
+                questDao.upsertObjectiveCompletions(listOf(ObjectiveCompletionEntity(completionId, objectiveId)))
+            }
+            PendingActionType.ABANDON -> questDao.deletePendingFor(action.questId)
+        }
+    }
+
+    private fun Throwable.isNetworkError() = ErrorMapper.map(this) == AppError.Network
 
     private suspend fun refreshDetail(questId: String) {
         val dto = remote.questDetail(questId)
@@ -170,5 +338,11 @@ class QuestRepositoryImpl @Inject constructor(
             objectives = rows.flatMap { it.objectives },
             done = rows.flatMap { it.done },
         )
+        // the server does not know yet what was done offline
+        pendingDao.all().forEach { applyLocally(it) }
+    }
+
+    private companion object {
+        const val MAX_ATTEMPTS = 8
     }
 }

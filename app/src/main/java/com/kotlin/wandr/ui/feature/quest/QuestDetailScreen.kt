@@ -48,10 +48,6 @@ import com.kotlin.wandr.ui.components.StatusBadge
 import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.theme.WandrTheme
 
-/**
- * Quest Details. Reports QUEST_VIEWED (BQ8 funnel) when it opens and "Accept Quest" starts the
- * quest (QUEST_ACCEPTED is published by the repository). Then it opens the tracker.
- */
 @Composable
 fun QuestDetailRoute(
     onBack: () -> Unit,

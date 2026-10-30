@@ -6,6 +6,7 @@ import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.AppException
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
+import com.kotlin.wandr.core.storage.PhotoGallery
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.core.telemetry.TelemetryEvents
 import com.kotlin.wandr.data.cache.MysteryQuestCache
@@ -14,7 +15,6 @@ import com.kotlin.wandr.data.remote.dto.RecommendedQuestDto
 import com.kotlin.wandr.data.repository.HomePreferences
 import com.kotlin.wandr.data.repository.HomePreferencesRepository
 import com.kotlin.wandr.data.repository.QuestRepository
-import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.GeoPoint
@@ -22,6 +22,7 @@ import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.QuestDetail
 import com.kotlin.wandr.testutil.FakeConnectivity
+import com.kotlin.wandr.domain.model.StepOutcome
 import com.kotlin.wandr.testutil.MainDispatcherRule
 import com.kotlin.wandr.testutil.activeQuest
 import com.kotlin.wandr.testutil.objective
@@ -32,7 +33,6 @@ import com.kotlin.wandr.ui.feature.quest.LocationStatus
 import com.kotlin.wandr.ui.feature.quest.QuestDetailViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -50,7 +50,7 @@ class QuestViewModelsTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
     private val questRepository = mockk<QuestRepository>()
-    private val storageRepository = mockk<StorageRepository>()
+    private val photoGallery = mockk<PhotoGallery>()
     private val telemetry = mockk<TelemetryRepository>(relaxed = true)
     private val homePreferences = mockk<HomePreferencesRepository>(relaxed = true) {
         every { preferences } returns flowOf(HomePreferences())
@@ -165,7 +165,8 @@ class QuestViewModelsTest {
 
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
-        return ActiveQuestViewModel(questRepository, storageRepository, analyticsRepository, trackerLocation)
+        every { questRepository.pendingObjectiveIds() } returns flowOf(emptySet())
+        return ActiveQuestViewModel(questRepository, analyticsRepository, trackerLocation, photoGallery)
     }
 
     @Test
@@ -173,37 +174,60 @@ class QuestViewModelsTest {
         val viewModel = tracker()
         viewModel.completeObjective("q1", "o2", photoJpeg = null)
         assertEquals("This step needs a photo", viewModel.uiState.value.errorMessage)
-        coVerify(exactly = 0) { questRepository.completeObjective(any(), any(), any()) }
+        coVerify(exactly = 0) { questRepository.checkObjective(any(), any(), any()) }
     }
 
     @Test
-    fun `photo is uploaded first and its path is sent with the step`() {
+    fun `the photo is sent with the step and the result is shown`() {
         val bytes = byteArrayOf(1, 2, 3)
         val done = ObjectiveResult(2, 2, true, 150, 1400, 8, null, 6, emptyList())
-        coEvery { storageRepository.uploadQuestPhoto("q1", "o2", bytes) } returns Result.success("u1/q1/o2.jpg")
-        coEvery { questRepository.completeObjective("q1", "o2", "u1/q1/o2.jpg") } returns Result.success(done)
+        coEvery { questRepository.checkObjective("q1", "o2", bytes) } returns Result.success(StepOutcome.Synced(done))
 
         val viewModel = tracker()
         viewModel.completeObjective("q1", "o2", bytes)
 
-        coVerifyOrder {
-            storageRepository.uploadQuestPhoto("q1", "o2", bytes)
-            questRepository.completeObjective("q1", "o2", "u1/q1/o2.jpg")
-        }
         assertEquals(done, viewModel.uiState.value.lastResult)
         assertEquals(null, viewModel.uiState.value.submittingObjectiveId)
     }
 
     @Test
-    fun `a failed upload does not check the step`() {
-        coEvery { storageRepository.uploadQuestPhoto(any(), any(), any()) } returns
-            Result.failure(AppException(AppError.Network))
+    fun `a step saved offline says it will sync later`() {
+        coEvery { questRepository.checkObjective("q1", "o2", any()) } returns Result.success(StepOutcome.Queued)
 
         val viewModel = tracker()
         viewModel.completeObjective("q1", "o2", byteArrayOf(1))
 
-        assertEquals(AppError.Network.message, viewModel.uiState.value.errorMessage)
-        coVerify(exactly = 0) { questRepository.completeObjective(any(), any(), any()) }
+        assertEquals(null, viewModel.uiState.value.lastResult)
+        assertTrue(viewModel.uiState.value.notice!!.contains("sync"))
+    }
+
+    @Test
+    fun `without space for the photo the user can save it in the gallery`() {
+        val bytes = byteArrayOf(1)
+        coEvery { questRepository.checkObjective(any(), any(), any()) } returns Result.failure(AppException(AppError.NoSpace))
+        coEvery { photoGallery.save(bytes) } returns true
+
+        val viewModel = tracker()
+        viewModel.completeObjective("q1", "o2", bytes)
+        assertTrue(viewModel.uiState.value.unsavedPhoto != null)
+
+        viewModel.savePhotoToGallery()
+
+        coVerify { photoGallery.save(bytes) }
+        assertEquals(null, viewModel.uiState.value.unsavedPhoto)
+        assertTrue(viewModel.uiState.value.notice!!.contains("gallery"))
+    }
+
+    @Test
+    fun `a server error is shown and the step stays unchecked`() {
+        coEvery { questRepository.checkObjective(any(), any(), any()) } returns
+            Result.failure(AppException(AppError.Server("Quest is not in progress")))
+
+        val viewModel = tracker()
+        viewModel.completeObjective("q1", "o2", byteArrayOf(1))
+
+        assertEquals("Quest is not in progress", viewModel.uiState.value.errorMessage)
+        assertEquals(null, viewModel.uiState.value.lastResult)
     }
 
     // ---------- Smart feature: drop-off hint ----------

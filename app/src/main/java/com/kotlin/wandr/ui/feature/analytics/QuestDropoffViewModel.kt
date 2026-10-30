@@ -22,7 +22,6 @@ data class QuestDropoffUiState(
     val errorMessage: String? = null,
 )
 
-/** BQ8 · Abandonment funnel: where users give up quests. */
 @HiltViewModel
 class QuestDropoffViewModel @Inject constructor(
     private val analyticsRepository: AnalyticsRepository,
@@ -37,11 +36,16 @@ class QuestDropoffViewModel @Inject constructor(
         load()
     }
 
-    fun load() {
+    fun load() = fetch(forceRefresh = false)
+
+    fun refresh() = fetch(forceRefresh = true)
+
+    private fun fetch(forceRefresh: Boolean) {
         loadJob?.cancel()
         _uiState.update { it.copy(isLoading = true, loadFailed = false) }
         loadJob = viewModelScope.launch {
-            analyticsRepository.questDropoff()
+            val result = if (forceRefresh) analyticsRepository.refreshQuestDropoff() else analyticsRepository.questDropoff()
+            result
                 .onSuccess { report -> _uiState.update { it.copy(isLoading = false, report = report) } }
                 .onFailure { error ->
                     _uiState.update {

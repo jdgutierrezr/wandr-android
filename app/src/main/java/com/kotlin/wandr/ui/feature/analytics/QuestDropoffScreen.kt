@@ -39,6 +39,9 @@ import com.kotlin.wandr.ui.components.StatusBadge
 import com.kotlin.wandr.ui.components.WandrCard
 import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.theme.WandrTheme
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * BQ8 · Abandonment funnel (Type 3, features analysis): in which step users most often give up
@@ -64,7 +67,7 @@ fun QuestDropoffRoute(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onRefresh = viewModel::load,
+        onRefresh = viewModel::refresh,
         onOpenQuest = onOpenQuest,
     )
 }
@@ -118,6 +121,16 @@ fun QuestDropoffScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
                 item { StatusBadge(text = "Internal · team analytics (BQ8, Type 3)", style = BadgeStyle.Neutral) }
+                // Caching strategy: say how old the numbers are, and if they are the offline copy
+                report.updatedAtMillis?.let { updatedAt ->
+                    item {
+                        StatusBadge(
+                            text = if (report.isStale) "Offline · saved copy from ${updatedAt.asClockTime()}"
+                            else "Updated at ${updatedAt.asClockTime()}",
+                            style = BadgeStyle.Neutral,
+                        )
+                    }
+                }
                 report.worstPoint?.let { item { AnswerCard(it, report.totalAbandoned) } }
                 item { AllQuestsCard(report) }
                 item { SectionLabel("By quest", trailing = "${report.quests.size} quests") }
@@ -185,6 +198,10 @@ private fun QuestFunnelCard(quest: QuestDropoff, onClick: () -> Unit) {
         }
     }
 }
+
+/** "14:05", in the phone's time zone. */
+private fun Long.asClockTime(): String =
+    DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(this))
 
 @Composable
 private fun Centered(padding: PaddingValues, content: @Composable () -> Unit) {

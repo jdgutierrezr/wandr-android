@@ -4,6 +4,14 @@ import android.content.Context
 import androidx.room.Room
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.data.local.WandrDatabase
+import com.kotlin.wandr.core.storage.FilePendingPhotoStore
+import com.kotlin.wandr.core.storage.MediaStorePhotoGallery
+import com.kotlin.wandr.core.storage.PendingPhotoStore
+import com.kotlin.wandr.core.storage.PhotoGallery
+import com.kotlin.wandr.core.sync.QuestSyncScheduler
+import com.kotlin.wandr.core.sync.WorkManagerQuestSyncScheduler
+import com.kotlin.wandr.data.local.DropoffCache
+import com.kotlin.wandr.data.local.FileDropoffCache
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.AnalyticsRepositoryImpl
 import com.kotlin.wandr.data.repository.AuthRepository
@@ -62,7 +70,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WandrDatabase =
         Room.databaseBuilder(context, WandrDatabase::class.java, WandrDatabase.NAME)
-            .addMigrations(WandrDatabase.MIGRATION_2_3)
+            .addMigrations(WandrDatabase.MIGRATION_2_3, WandrDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -71,6 +79,7 @@ object DatabaseModule {
     @Provides fun providePlaceDao(db: WandrDatabase) = db.placeDao()
     @Provides fun provideEventDao(db: WandrDatabase) = db.eventDao()
     @Provides fun provideTelemetryDao(db: WandrDatabase) = db.telemetryDao()
+    @Provides fun providePendingActionDao(db: WandrDatabase) = db.pendingActionDao()
 }
 
 @Module
@@ -83,6 +92,10 @@ abstract class RepositoryModule {
     @Binds abstract fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
+    @Binds abstract fun bindDropoffCache(impl: FileDropoffCache): DropoffCache
+    @Binds abstract fun bindPendingPhotoStore(impl: FilePendingPhotoStore): PendingPhotoStore
+    @Binds abstract fun bindPhotoGallery(impl: MediaStorePhotoGallery): PhotoGallery
+    @Binds abstract fun bindQuestSyncScheduler(impl: WorkManagerQuestSyncScheduler): QuestSyncScheduler
     @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
     @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
     @Binds abstract fun bindHomePreferencesRepository(impl: HomePreferencesRepositoryImpl): HomePreferencesRepository
