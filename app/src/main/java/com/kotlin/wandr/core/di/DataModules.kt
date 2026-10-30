@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.kotlin.wandr.BuildConfig
 import com.kotlin.wandr.data.local.WandrDatabase
+import com.kotlin.wandr.data.local.DropoffCache
+import com.kotlin.wandr.data.local.FileDropoffCache
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.AnalyticsRepositoryImpl
 import com.kotlin.wandr.data.repository.AuthRepository
@@ -81,6 +83,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
+    @Binds abstract fun bindDropoffCache(impl: FileDropoffCache): DropoffCache
     @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
     @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
 }

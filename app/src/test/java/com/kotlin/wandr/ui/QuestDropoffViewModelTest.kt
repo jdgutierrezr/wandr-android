@@ -58,4 +58,16 @@ class QuestDropoffViewModelTest {
         assertEquals(report, viewModel.uiState.value.report)
         assertFalse(viewModel.uiState.value.loadFailed)
     }
+
+    @Test
+    fun `the refresh button asks for the latest numbers`() {
+        coEvery { repository.questDropoff() } returns Result.success(report)
+        val viewModel = QuestDropoffViewModel(repository)
+        val newer = QuestDropoffReport(listOf(DropoffPoint("q1", "Quest q1", 3, 1, "Step 1", 5)))
+        coEvery { repository.refreshQuestDropoff() } returns Result.success(newer)
+
+        viewModel.refresh()
+
+        assertEquals(5, viewModel.uiState.value.report!!.totalAbandoned)
+    }
 }
