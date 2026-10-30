@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
+import com.kotlin.wandr.core.network.ConnectivityObserver
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.PlaceRepository
 import com.kotlin.wandr.data.repository.QuestRepository
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,6 +41,7 @@ class MapViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val placeRepository: PlaceRepository,
     private val locationProvider: LocationProvider,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -73,6 +77,8 @@ class MapViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+
+        connectivity.status.drop(1).filter { it }.onEach { refresh() }.launchIn(viewModelScope)
     }
 
     fun setRadius(radiusKm: Double) {
