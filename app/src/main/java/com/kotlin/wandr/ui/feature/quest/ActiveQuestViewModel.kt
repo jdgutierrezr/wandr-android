@@ -1,5 +1,6 @@
 package com.kotlin.wandr.ui.feature.quest
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.error.appError
@@ -17,6 +18,7 @@ import com.kotlin.wandr.domain.model.ObjectiveResult
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.StepRisk
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 enum class LocationStatus {
@@ -156,6 +160,15 @@ class ActiveQuestViewModel @Inject constructor(
         }
     }
 
+    fun completeObjectiveWithPhoto(questId: String, objectiveId: String, photo: Bitmap) {
+        if (_uiState.value.submittingObjectiveId != null) return
+        viewModelScope.launch {
+            // compressing on the main thread freezes the screen
+            val jpeg = withContext(Dispatchers.Default) { photo.toJpeg() }
+            completeObjective(questId, objectiveId, jpeg)
+        }
+    }
+
     fun abandonQuest(questId: String) {
         if (_uiState.value.abandoningQuestId != null) return
         _uiState.update { it.copy(abandoningQuestId = questId, errorMessage = null) }
@@ -175,4 +188,9 @@ class ActiveQuestViewModel @Inject constructor(
         const val DISTANCE_STEP_METERS = 10f
         const val GPS_INTERVAL_MS = 5_000L
     }
+}
+
+private fun Bitmap.toJpeg(): ByteArray = ByteArrayOutputStream().use { out ->
+    compress(Bitmap.CompressFormat.JPEG, 85, out)
+    out.toByteArray()
 }
