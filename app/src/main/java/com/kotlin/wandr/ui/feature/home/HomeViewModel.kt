@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.kotlin.wandr.data.repository.HomePreferencesRepository
+import kotlinx.coroutines.flow.first
 
 
 data class HomeUiState(
@@ -140,6 +142,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val locationProvider: LocationProvider,
+    private val homePreferencesRepository: HomePreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -150,14 +153,30 @@ class HomeViewModel @Inject constructor(
     private val refreshTrigger = MutableStateFlow(0)
 
     init {
-        refreshTrigger
-            .flatMapLatest {
-                nearbyQuests()
+        viewModelScope.launch {
+            try {
+                val savedPreferences =
+                    homePreferencesRepository.preferences.first()
+
+                _uiState.update {
+                    it.copy(
+                        mysteryEnergyLevel = savedPreferences.energyLevel,
+                        mysteryRadiusKm = savedPreferences.radiusKm,
+                    )
+                }
+            } catch (exception: Exception) {
+                // If preferences cannot be read, keep the default values.
             }
-            .onEach { resource ->
-                reduceNearbyQuests(resource)
-            }
-            .launchIn(viewModelScope)
+
+            refreshTrigger
+                .flatMapLatest {
+                    nearbyQuests()
+                }
+                .onEach { resource ->
+                    reduceNearbyQuests(resource)
+                }
+                .launchIn(viewModelScope)
+        }
     }
 
     // =========================================================
@@ -236,6 +255,9 @@ class HomeViewModel @Inject constructor(
             )
         }
 
+        viewModelScope.launch {
+            homePreferencesRepository.saveEnergyLevel(energyLevel)
+        }
         loadMysteryQuests()
     }
 
@@ -263,6 +285,9 @@ class HomeViewModel @Inject constructor(
             )
         }
 
+        viewModelScope.launch {
+            homePreferencesRepository.saveRadiusKm(radiusKm)
+        }
         loadMysteryQuests()
     }
 
