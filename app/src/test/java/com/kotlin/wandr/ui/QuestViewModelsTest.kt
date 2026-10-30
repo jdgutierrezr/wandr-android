@@ -7,9 +7,11 @@ import com.kotlin.wandr.core.error.AppException
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
+import com.kotlin.wandr.core.telemetry.TelemetryEvents
 import com.kotlin.wandr.data.repository.AnalyticsRepository
 import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.StorageRepository
+import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.GeoPoint
 import com.kotlin.wandr.domain.model.ObjectiveResult
@@ -28,6 +30,7 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -43,6 +46,7 @@ class QuestViewModelsTest {
 
     private val questRepository = mockk<QuestRepository>()
     private val storageRepository = mockk<StorageRepository>()
+    private val telemetry = mockk<TelemetryRepository>(relaxed = true)
     /** Drop-off data for the smart hint. Default: one abandon of q1 after step 1. */
     private val analyticsRepository = mockk<AnalyticsRepository> {
         coEvery { questDropoff() } returns Result.success(
@@ -61,7 +65,7 @@ class QuestViewModelsTest {
 
     private fun home(nearby: Resource<List<com.kotlin.wandr.domain.model.Quest>>): HomeViewModel {
         every { questRepository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Loading, nearby)
-        return HomeViewModel(questRepository, locationProvider)
+        return HomeViewModel(questRepository, locationProvider, telemetry)
     }
 
     @Test
@@ -73,6 +77,15 @@ class QuestViewModelsTest {
         assertEquals(2, state.quests.size)
         assertEquals(listOf("food", "music", "outdoors"), state.availableTags)
         assertEquals(UserLocation.Source.FALLBACK, state.locationSource)
+    }
+
+    @Test
+    fun `home records the load time once, when the first result arrives`() {
+        home(Resource.Success(listOf(quest("q1"))))
+
+        verify(exactly = 1) {
+            telemetry.record(TelemetryEvents.QUEST_RECOMMENDATIONS_LOAD, any(), true, any())
+        }
     }
 
     @Test

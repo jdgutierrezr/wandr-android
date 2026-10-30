@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
 import com.kotlin.wandr.core.strategy.Resource
+import com.kotlin.wandr.core.telemetry.TelemetryEvents
 import com.kotlin.wandr.data.mapper.toRecommendedQuest
 import com.kotlin.wandr.data.repository.QuestRepository
+import com.kotlin.wandr.data.repository.TelemetryRepository
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.RecommendedQuest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.TimeSource
 
 
 data class HomeUiState(
@@ -140,6 +143,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val questRepository: QuestRepository,
     private val locationProvider: LocationProvider,
+    private val telemetry: TelemetryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -356,6 +360,9 @@ class HomeViewModel @Inject constructor(
 
         emit(Resource.Loading)
 
+        val mark = TimeSource.Monotonic.markNow()
+        var reported = false
+
         val location =
             locationProvider.currentLocation()
 
@@ -368,7 +375,22 @@ class HomeViewModel @Inject constructor(
         emitAll(
             questRepository.nearbyQuests(
                 location.point
-            )
+            ).onEach { resource ->
+                if (!reported && resource !is Resource.Loading) {
+                    reported = true
+                    telemetry.record(
+                        TelemetryEvents.QUEST_RECOMMENDATIONS_LOAD,
+                        mark.elapsedNow().inWholeMilliseconds,
+                        success = resource is Resource.Success,
+                        metadata = mapOf(
+                            "result_count" to ((resource as? Resource.Success)?.data?.size ?: 0).toString(),
+                            "from_cache" to ((resource as? Resource.Success)?.isStale ?: false).toString(),
+                            "location_source" to location.source.name,
+                            "radius_km" to QuestRepository.DEFAULT_RADIUS_KM.toString(),
+                        ),
+                    )
+                }
+            }
         )
     }
 
