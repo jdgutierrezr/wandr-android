@@ -16,6 +16,7 @@ import com.kotlin.wandr.domain.model.Place
 import com.kotlin.wandr.domain.model.PlaceCategory
 import com.kotlin.wandr.domain.model.Tier
 import com.kotlin.wandr.domain.model.UserProfile
+import com.kotlin.wandr.testutil.FakeConnectivity
 import com.kotlin.wandr.testutil.MainDispatcherRule
 import com.kotlin.wandr.testutil.quest
 import com.kotlin.wandr.ui.components.map.MapMarker
@@ -44,10 +45,26 @@ class MapProfileViewModelsTest {
 
     private val museum = Place("place-q1", "Museo del Oro", PlaceCategory.MUSEUM, null, GeoPoint(4.6, -74.07), 4.8, null, 1.2)
 
-    private fun mapViewModel(quests: QuestRepository, places: List<Place> = listOf(museum)): MapViewModel {
+    private fun mapViewModel(
+        quests: QuestRepository,
+        places: List<Place> = listOf(museum),
+        connectivity: FakeConnectivity = FakeConnectivity(),
+    ): MapViewModel {
         val placeRepository = mockk<PlaceRepository>()
         every { placeRepository.nearbyPlaces(any(), any(), any(), any()) } returns flowOf(Resource.Success(places))
-        return MapViewModel(quests, placeRepository, locationProvider)
+        return MapViewModel(quests, placeRepository, locationProvider, connectivity)
+    }
+
+    @Test
+    fun `map reloads when the connection comes back`() {
+        val repository = mockk<QuestRepository>()
+        every { repository.nearbyQuests(any(), any(), any()) } returns flowOf(Resource.Success(listOf(quest("q1"))))
+        val connectivity = FakeConnectivity(online = false)
+
+        mapViewModel(repository, connectivity = connectivity)
+        connectivity.status.value = true
+
+        verify(exactly = 2) { repository.nearbyQuests(any(), any(), any()) }
     }
 
     @Test
