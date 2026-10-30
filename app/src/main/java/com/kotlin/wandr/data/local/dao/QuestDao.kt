@@ -35,6 +35,24 @@ interface QuestDao {
     @Query("SELECT * FROM quests WHERE id = :questId")
     fun observeQuest(questId: String): Flow<QuestWithTags?>
 
+    @Query("SELECT * FROM quests WHERE id = :questId")
+    suspend fun questById(questId: String): QuestEntity?
+
+    @Query("SELECT id FROM quest_completions WHERE questId = :questId AND status = 'pending' LIMIT 1")
+    suspend fun pendingCompletionId(questId: String): String?
+
+    @Query("DELETE FROM quest_objective_completions WHERE completionId IN (SELECT id FROM quest_completions WHERE questId = :questId AND status = 'pending')")
+    suspend fun deletePendingProgressFor(questId: String)
+
+    @Query("DELETE FROM quest_completions WHERE questId = :questId AND status = 'pending'")
+    suspend fun deletePendingCompletionFor(questId: String)
+
+    @Transaction
+    suspend fun deletePendingFor(questId: String) {
+        deletePendingProgressFor(questId)
+        deletePendingCompletionFor(questId)
+    }
+
     @Query("SELECT distanceKm FROM quests WHERE id = :questId")
     suspend fun distanceOf(questId: String): Double?
 
