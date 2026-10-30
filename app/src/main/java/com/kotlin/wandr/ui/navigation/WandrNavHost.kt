@@ -20,6 +20,7 @@ import com.kotlin.wandr.ui.feature.home.HomeRoute
 import com.kotlin.wandr.ui.feature.profile.ProfileRoute
 import com.kotlin.wandr.ui.components.map.WandrMap
 import com.kotlin.wandr.ui.feature.map.MapRoute
+import com.kotlin.wandr.ui.feature.analytics.LoadTimeRoute
 import com.kotlin.wandr.ui.feature.analytics.QuestDropoffRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestsRoute
@@ -75,6 +76,9 @@ data object ActiveQuestsDestination
 
 @Serializable
 data object QuestDropoffDestination
+
+@Serializable
+data object LoadTimeDestination
 
 
 // =============================================================
@@ -244,6 +248,17 @@ fun WandrNavHost(
                     } else {
                         null
                     },
+
+                onOpenLoadTime =
+                    if (BuildConfig.DEBUG) {
+                        {
+                            navController.navigate(
+                                LoadTimeDestination
+                            )
+                        }
+                    } else {
+                        null
+                    },
             )
         }
 
@@ -324,6 +339,10 @@ fun WandrNavHost(
         // =====================================================
         // QUEST DROPOFF
         // =====================================================
+
+        composable<LoadTimeDestination> {
+            LoadTimeRoute(onBack = { navController.popBackStack() })
+        }
 
         composable<QuestDropoffDestination> {
 
