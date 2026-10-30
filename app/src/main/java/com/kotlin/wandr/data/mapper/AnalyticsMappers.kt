@@ -1,7 +1,9 @@
 package com.kotlin.wandr.data.mapper
 
 import com.kotlin.wandr.data.remote.dto.QuestDropoffDto
+import com.kotlin.wandr.data.remote.dto.RecommendationLoadTimeDto
 import com.kotlin.wandr.domain.model.DropoffPoint
+import com.kotlin.wandr.domain.model.RecommendationLoadTime
 
 fun QuestDropoffDto.toDomain() = DropoffPoint(
     questId = questId,
@@ -10,4 +12,12 @@ fun QuestDropoffDto.toDomain() = DropoffPoint(
     lastStep = lastStep,
     lastStepTitle = lastStepTitle,
     abandonedCount = abandonedCount,
+)
+
+fun RecommendationLoadTimeDto.toDomain() = RecommendationLoadTime(
+    requests = requests,
+    avgMs = avgMs,
+    p95Ms = p95Ms,
+    networkAvgMs = networkAvgMs,
+    cacheAvgMs = cacheAvgMs,
 )
