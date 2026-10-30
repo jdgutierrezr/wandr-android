@@ -18,6 +18,8 @@ import com.kotlin.wandr.data.repository.QuestRepository
 import com.kotlin.wandr.data.repository.QuestRepositoryImpl
 import com.kotlin.wandr.data.repository.StorageRepository
 import com.kotlin.wandr.data.repository.StorageRepositoryImpl
+import com.kotlin.wandr.data.repository.TelemetryRepository
+import com.kotlin.wandr.data.repository.TelemetryRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -58,6 +60,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WandrDatabase =
         Room.databaseBuilder(context, WandrDatabase::class.java, WandrDatabase.NAME)
+            .addMigrations(WandrDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -65,6 +68,7 @@ object DatabaseModule {
     @Provides fun provideQuestDao(db: WandrDatabase) = db.questDao()
     @Provides fun providePlaceDao(db: WandrDatabase) = db.placeDao()
     @Provides fun provideEventDao(db: WandrDatabase) = db.eventDao()
+    @Provides fun provideTelemetryDao(db: WandrDatabase) = db.telemetryDao()
 }
 
 @Module
@@ -78,4 +82,5 @@ abstract class RepositoryModule {
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
     @Binds abstract fun bindQuestRepository(impl: QuestRepositoryImpl): QuestRepository
+    @Binds abstract fun bindTelemetryRepository(impl: TelemetryRepositoryImpl): TelemetryRepository
 }
