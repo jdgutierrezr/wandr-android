@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -38,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kotlin.wandr.domain.model.Achievement
 import com.kotlin.wandr.domain.model.Badge
 import com.kotlin.wandr.domain.model.EarnedBadge
+import com.kotlin.wandr.domain.model.QuestHistoryItem
 import com.kotlin.wandr.domain.model.StreakSummary
 import com.kotlin.wandr.domain.model.Tier
 import com.kotlin.wandr.domain.model.UserProfile
@@ -201,6 +203,19 @@ fun ProfileScreen(
                 state.streakFailed -> item { StreakErrorCard(onRetry = onRetryStreak) }
             }
 
+            item { SectionHeader(title = "Completed quests", count = "${state.history.size}") }
+            if (state.history.isEmpty()) {
+                item {
+                    Text(
+                        "Finish a quest and it will show up here.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WandrTheme.colors.textSecondary,
+                    )
+                }
+            } else {
+                items(state.history, key = { "${it.questId}-${it.completedAt}" }) { CompletedQuestRow(it) }
+            }
+
             // Internal tool, only in debug builds (same idea as "Design system (debug)" on Login)
             if (onOpenTeamAnalytics != null) {
                 item { LinkButton(text = "Team analytics · BQ8 funnel (debug)", onClick = onOpenTeamAnalytics) }
@@ -222,6 +237,29 @@ fun ProfileScreen(
         }
     }
 }
+
+@Composable
+private fun CompletedQuestRow(item: QuestHistoryItem) {
+    WandrCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(WandrTheme.spacing.md),
+        ) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = WandrTheme.colors.success)
+            Column(Modifier.weight(1f)) {
+                Text(item.questTitle, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    COMPLETED_DATE.format(item.completedAt.atZone(ZoneId.systemDefault())),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WandrTheme.colors.textSecondary,
+                )
+            }
+            Text("+${item.pointsReward} XP", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+private val COMPLETED_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy · HH:mm", Locale.US)
 
 @Composable
 private fun SavedDataBanner() {
