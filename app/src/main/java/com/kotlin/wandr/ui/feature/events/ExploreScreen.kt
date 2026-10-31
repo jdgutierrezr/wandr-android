@@ -57,13 +57,13 @@ import com.kotlin.wandr.ui.components.CoverImage
 import com.kotlin.wandr.ui.components.MainTab
 import com.kotlin.wandr.ui.components.WandrBottomBar
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.rememberSaveable
 import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
 import com.kotlin.wandr.ui.theme.WandrTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun ExploreRoute(
@@ -77,6 +77,8 @@ fun ExploreRoute(
     ExploreScreen(
         state = state,
         onRefresh = viewModel::refresh,
+        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onCategorySelected = viewModel::onCategorySelected,
         onSelectTab = onSelectTab,
         onOpenQuest = { openQuestId = it },
     )
@@ -94,35 +96,15 @@ fun ExploreRoute(
 fun ExploreScreen(
     state: ExploreUiState,
     onRefresh: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
     onSelectTab: (MainTab) -> Unit = {},
     onOpenQuest: (String) -> Unit = {},
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf("All") }
 
     val categories = listOf("All", "Outdoor", "Food", "Culture", "Music")
-
-    val filteredQuests = state.quests.filter { quest ->
-        val matchesSearch = searchQuery.isBlank() || listOfNotNull(
-            quest.title,
-            quest.description,
-            quest.placeName,
-            quest.tags.joinToString(" "),
-        ).joinToString(" ").contains(searchQuery, ignoreCase = true)
-
-        val matchesCategory = selectedCategory == "All" ||
-                quest.tags.any { it.equals(selectedCategory, ignoreCase = true) }
-
-        matchesSearch && matchesCategory
-    }
-
-    val filteredEvents = state.events.filter { event ->
-        searchQuery.isBlank() || listOfNotNull(
-            event.title,
-            event.description,
-            event.placeName,
-        ).joinToString(" ").contains(searchQuery, ignoreCase = true)
-    }
 
     Scaffold(
         topBar = { WandrTopBar(title = "Explore") },
@@ -138,7 +120,10 @@ fun ExploreScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = {
+                    searchQuery = it
+                    onSearchQueryChanged(it)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("Search quests in Bogotá.") },
@@ -185,7 +170,10 @@ fun ExploreScreen(
                     ExploreCategoryChip(
                         text = category,
                         selected = selectedCategory == category,
-                        onClick = { selectedCategory = category },
+                        onClick = {
+                            selectedCategory = category
+                            onCategorySelected(category)
+                        },
                     )
                 }
             }
@@ -201,14 +189,14 @@ fun ExploreScreen(
 
             if (state.isLoadingEvents && state.events.isEmpty()) {
                 LoadingExploreSection()
-            } else if (filteredEvents.isEmpty()) {
+            } else if (state.filteredEvents.isEmpty()) {
                 EmptyEventsSection()
             } else {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    filteredEvents.take(8).forEach { event ->
+                    state.filteredEvents.take(8).forEach { event ->
                         EventExploreCard(event)
                     }
                 }
@@ -218,7 +206,7 @@ fun ExploreScreen(
 
             ExploreSectionHeader(
                 title = "Featured Quests",
-                count = filteredQuests.size,
+                count = state.filteredQuests.size,
                 onSeeAll = null,
             )
 
@@ -226,14 +214,14 @@ fun ExploreScreen(
 
             if (state.isLoadingQuests && state.quests.isEmpty()) {
                 LoadingExploreSection()
-            } else if (filteredQuests.isEmpty()) {
+            } else if (state.filteredQuests.isEmpty()) {
                 EmptyQuestsSection()
             } else {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    filteredQuests.take(8).forEach { quest ->
+                    state.filteredQuests.take(8).forEach { quest ->
                         FeaturedQuestCard(quest, onClick = { onOpenQuest(quest.id) })
                     }
                 }

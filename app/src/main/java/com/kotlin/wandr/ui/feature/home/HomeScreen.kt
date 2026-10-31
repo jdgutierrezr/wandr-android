@@ -59,7 +59,7 @@ import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.domain.model.RecommendedQuest
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.kotlin.wandr.ui.components.CoverImage
 import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
