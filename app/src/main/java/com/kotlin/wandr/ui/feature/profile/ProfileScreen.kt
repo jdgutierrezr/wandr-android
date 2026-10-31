@@ -82,6 +82,7 @@ fun ProfileRoute(
     onOpenTeamAnalytics: (() -> Unit)? = null,
     onOpenLoadTime: (() -> Unit)? = null,
     onOpenStepResponse: (() -> Unit)? = null,
+    onOpenLowUseCategories: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -112,6 +113,7 @@ fun ProfileRoute(
         onOpenTeamAnalytics = onOpenTeamAnalytics,
         onOpenLoadTime = onOpenLoadTime,
         onOpenStepResponse = onOpenStepResponse,
+        onOpenLowUseCategories = onOpenLowUseCategories,
     )
 }
 
@@ -126,6 +128,7 @@ fun ProfileScreen(
     onOpenTeamAnalytics: (() -> Unit)? = null,
     onOpenLoadTime: (() -> Unit)? = null,
     onOpenStepResponse: (() -> Unit)? = null,
+    onOpenLowUseCategories: (() -> Unit)? = null,
     todayIndex: Int = LocalDate.now(BOGOTA).dayOfWeek.value - 1,
 ) {
     val profile = state.profile
@@ -207,6 +210,14 @@ fun ProfileScreen(
             }
             if (onOpenStepResponse != null) {
                 item { LinkButton(text = "Team analytics · BQ2 step response (debug)", onClick = onOpenStepResponse) }
+            }
+            if (onOpenLowUseCategories != null) {
+                item {
+                    LinkButton(
+                        text = "Team analytics · BQ7 low-use categories (debug)",
+                        onClick = onOpenLowUseCategories
+                    )
+                }
             }
         }
     }

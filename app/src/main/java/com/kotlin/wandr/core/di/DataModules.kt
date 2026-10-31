@@ -44,6 +44,8 @@ import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
+import com.kotlin.wandr.data.local.FileLowUseCategoriesCache
+import com.kotlin.wandr.data.local.LowUseCategoriesCache
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -93,6 +95,7 @@ abstract class RepositoryModule {
     @Binds abstract fun bindEventRepository(impl: EventRepositoryImpl): EventRepository
     @Binds abstract fun bindAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository
     @Binds abstract fun bindDropoffCache(impl: FileDropoffCache): DropoffCache
+    @Binds abstract fun bindLowUseCategoriesCache(impl: FileLowUseCategoriesCache): LowUseCategoriesCache
     @Binds abstract fun bindPendingPhotoStore(impl: FilePendingPhotoStore): PendingPhotoStore
     @Binds abstract fun bindPhotoGallery(impl: MediaStorePhotoGallery): PhotoGallery
     @Binds abstract fun bindQuestSyncScheduler(impl: WorkManagerQuestSyncScheduler): QuestSyncScheduler

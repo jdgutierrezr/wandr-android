@@ -7,6 +7,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.kotlin.wandr.data.remote.dto.LowUseCategoryDto
 
 @Singleton
 class AnalyticsRemoteDataSource @Inject constructor(
@@ -20,4 +21,7 @@ class AnalyticsRemoteDataSource @Inject constructor(
 
     suspend fun stepResponseTimes(): List<StepResponseTimeDto> =
         supabase.postgrest.rpc("get_step_response_time").decodeList()
+
+    suspend fun lowUseCategories(): List<LowUseCategoryDto> =
+        supabase.postgrest.rpc("get_low_use_categories").decodeList()
 }
