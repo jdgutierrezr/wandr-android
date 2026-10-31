@@ -4,6 +4,7 @@ import com.kotlin.wandr.data.remote.dto.ActiveCompletionDto
 import com.kotlin.wandr.data.remote.dto.CompletionDto
 import com.kotlin.wandr.data.remote.dto.NearbyQuestDto
 import com.kotlin.wandr.data.remote.dto.ObjectiveResultDto
+import com.kotlin.wandr.data.remote.dto.QuestIdDto
 import com.kotlin.wandr.data.remote.dto.QuestDetailDto
 import com.kotlin.wandr.data.remote.dto.QuestTagDto
 import com.kotlin.wandr.data.remote.dto.RecommendedQuestDto
@@ -73,6 +74,18 @@ class QuestRemoteDataSource @Inject constructor(
                 }
             }
             .decodeList()
+
+    suspend fun takenQuestIds(): Set<String> =
+        supabase.from("quest_completions")
+            .select(Columns.raw("quest_id")) {
+                filter {
+                    eq("user_id", supabase.requireUserId())
+                    isIn("status", listOf("pending", "completed"))
+                }
+            }
+            .decodeList<QuestIdDto>()
+            .map { it.questId }
+            .toSet()
 
     suspend fun startQuest(questId: String): CompletionDto =
         supabase.postgrest.rpc("start_quest", buildJsonObject { put("p_quest_id", questId) }).decodeAs()

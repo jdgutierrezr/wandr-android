@@ -55,6 +55,8 @@ import com.kotlin.wandr.domain.model.Event
 import com.kotlin.wandr.domain.model.Quest
 import com.kotlin.wandr.ui.components.CoverImage
 import com.kotlin.wandr.ui.components.MainTab
+import com.kotlin.wandr.ui.components.QuestRow
+import com.kotlin.wandr.ui.components.SecondaryButton
 import com.kotlin.wandr.ui.components.WandrBottomBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.rememberSaveable
@@ -62,6 +64,7 @@ import com.kotlin.wandr.ui.components.WandrTopBar
 import com.kotlin.wandr.ui.feature.quest.QuestDetailSheet
 import com.kotlin.wandr.ui.theme.WandrTheme
 import java.time.ZoneId
+import java.util.Locale
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.outlined.PersonOutline
 
@@ -79,6 +82,8 @@ fun ExploreRoute(
         onRefresh = viewModel::refresh,
         onSelectTab = onSelectTab,
         onOpenQuest = { openQuestId = it },
+        onToggleAllQuests = viewModel::toggleAllQuests,
+        onRetryAllQuests = viewModel::loadAllQuests,
     )
 
     openQuestId?.let { id ->
@@ -96,6 +101,8 @@ fun ExploreScreen(
     onRefresh: () -> Unit,
     onSelectTab: (MainTab) -> Unit = {},
     onOpenQuest: (String) -> Unit = {},
+    onToggleAllQuests: () -> Unit = {},
+    onRetryAllQuests: () -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -259,6 +266,20 @@ fun ExploreScreen(
                     )
                     TextButton(onClick = onRefresh) { Text("Retry") }
                 }
+            }
+
+            Spacer(Modifier.height(34.dp))
+
+            SecondaryButton(
+                text = if (state.showAllQuests) "Hide all quests" else "See all quests",
+                onClick = onToggleAllQuests,
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = Icons.Outlined.Explore,
+            )
+
+            if (state.showAllQuests) {
+                Spacer(Modifier.height(16.dp))
+                AllQuestsSection(state = state, onOpenQuest = onOpenQuest, onRetry = onRetryAllQuests)
             }
         }
     }
@@ -437,6 +458,51 @@ private fun FeaturedQuestCard(quest: Quest, onClick: () -> Unit) {
                         color = WandrTheme.colors.textSecondary,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllQuestsSection(
+    state: ExploreUiState,
+    onOpenQuest: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    when {
+        state.isLoadingAllQuests -> LoadingExploreSection()
+        state.allQuestsError != null -> Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                state.allQuestsError,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TextButton(onClick = onRetry) { Text("Retry") }
+        }
+        state.allQuests.isEmpty() -> Text(
+            "You've already started or finished every quest. Nice!",
+            modifier = Modifier.padding(vertical = 20.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = WandrTheme.colors.textSecondary,
+        )
+        else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                "${state.allQuests.size} quests you haven't tried yet",
+                style = MaterialTheme.typography.bodySmall,
+                color = WandrTheme.colors.textSecondary,
+            )
+            state.allQuests.forEach { quest ->
+                QuestRow(
+                    title = quest.title,
+                    subtitle = listOfNotNull(
+                        quest.placeName,
+                        quest.distanceKm?.let { String.format(Locale.US, "%.1f km", it) },
+                    ).joinToString(" · "),
+                    imageUrl = quest.coverImageUrl,
+                    xp = quest.pointsReward,
+                    onClick = { onOpenQuest(quest.id) },
+                )
             }
         }
     }

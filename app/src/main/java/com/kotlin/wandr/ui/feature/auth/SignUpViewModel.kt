@@ -24,6 +24,7 @@ data class SignUpUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSignedUp: Boolean = false,
+    val emailTaken: Boolean = false,
 ) {
     val hasFieldErrors: Boolean get() = nameError != null || emailError != null || passwordError != null
 }
@@ -41,7 +42,7 @@ class SignUpViewModel @Inject constructor(
         _uiState.update { it.copy(name = value, nameError = null, errorMessage = null) }
 
     fun onEmailChange(value: String) =
-        _uiState.update { it.copy(email = value, emailError = null, errorMessage = null) }
+        _uiState.update { it.copy(email = value, emailError = null, errorMessage = null, emailTaken = false) }
 
     fun onPasswordChange(value: String) =
         _uiState.update { it.copy(password = value, passwordError = null, errorMessage = null) }
@@ -77,7 +78,13 @@ class SignUpViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, isSignedUp = true) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, errorMessage = error.appError.message) }
+                    if (error.appError == AppError.EmailTaken) {
+                        _uiState.update {
+                            it.copy(isLoading = false, emailTaken = true, emailError = AppError.EmailTaken.message)
+                        }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = error.appError.message) }
+                    }
                 }
         }
     }

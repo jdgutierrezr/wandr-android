@@ -18,6 +18,11 @@ data class NearbyQuestDto(
 )
 
 @Serializable
+data class QuestIdDto(
+    @SerialName("quest_id") val questId: String,
+)
+
+@Serializable
 data class QuestTagDto(
     @SerialName("quest_id") val questId: String,
     val tags: TagNameDto,
