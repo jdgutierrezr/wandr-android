@@ -156,6 +156,7 @@ fun MapScreen(
                         onMarkerClick = { marker ->
                             val index = state.quests.indexOfFirst { it.id == marker.id }
                             if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
+                            onOpenQuest(marker.id)
                         },
                         modifier = Modifier.fillMaxSize(),
                     )

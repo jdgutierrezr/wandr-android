@@ -66,6 +66,9 @@ interface QuestRepository {
         energyLevel: String = "relaxed",
     ): Result<List<RecommendedQuestDto>>
 
+    /** Every quest the user hasn't started or finished, closest first. */
+    suspend fun availableQuests(location: GeoPoint): Result<List<Quest>>
+
     fun questDetail(questId: String, policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<QuestDetail>>
 
     fun activeQuests(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<ActiveQuest>>>
@@ -87,6 +90,7 @@ interface QuestRepository {
 
     companion object {
         const val DEFAULT_RADIUS_KM = 5.0
+        const val ALL_QUESTS_RADIUS_KM = 20_000.0
     }
 }
 
@@ -117,6 +121,14 @@ class QuestRepositoryImpl @Inject constructor(
                 questDao.replaceNearby(quests.map { it.toEntity() }, tags.map { it.toEntity() })
             },
         )
+
+    override suspend fun availableQuests(location: GeoPoint): Result<List<Quest>> = safeCall {
+        val taken = remote.takenQuestIds() + questDao.takenQuestIds()
+        val quests = remote.nearbyQuests(location.latitude, location.longitude, QuestRepository.ALL_QUESTS_RADIUS_KM)
+            .filterNot { it.id in taken }
+        val tags = remote.tagsFor(quests.map { it.id }).groupBy({ it.questId }, { it.tags.name })
+        quests.map { it.toDomain(tags[it.id].orEmpty()) }
+    }
 
     override suspend fun recommendedQuests(location: GeoPoint, radiusKm: Double, energyLevel: String, ): Result<List<RecommendedQuestDto>> = safeCall {
         remote.recommendQuests(

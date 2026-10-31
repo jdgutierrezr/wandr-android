@@ -69,6 +69,9 @@ interface QuestDao {
     }
 
     @Transaction
+    @Query("SELECT questId FROM quest_completions WHERE status IN ('pending', 'completed')")
+    suspend fun takenQuestIds(): List<String>
+
     @Query("SELECT * FROM quest_completions WHERE status = 'pending' ORDER BY startedAtMillis DESC")
     fun observeActive(): Flow<List<CompletionWithProgress>>
 

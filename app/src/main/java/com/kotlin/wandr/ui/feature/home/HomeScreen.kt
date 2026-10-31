@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Star
@@ -143,6 +144,7 @@ fun HomeScreen(
             HomeHeader(
                 locationSource = state.locationSource,
                 onRefresh = onRefresh,
+                onOpenProfile = { onSelectTab(MainTab.PROFILE) },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -305,6 +307,7 @@ fun HomeScreen(
 private fun HomeHeader(
     locationSource: UserLocation.Source?,
     onRefresh: () -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -368,6 +371,17 @@ private fun HomeHeader(
                 imageVector = Icons.Outlined.Refresh,
                 contentDescription = "Refresh",
                 modifier = Modifier.size(26.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+
+        IconButton(
+            onClick = onOpenProfile,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AccountCircle,
+                contentDescription = "Profile",
+                modifier = Modifier.size(30.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
         }

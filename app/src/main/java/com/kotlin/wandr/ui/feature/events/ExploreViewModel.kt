@@ -3,6 +3,7 @@ package com.kotlin.wandr.ui.feature.events
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.EventRepository
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -39,6 +41,10 @@ data class ExploreUiState(
     val filteredQuests: List<Quest> = emptyList(),
     val isShowingSavedData: Boolean = false,
     val errorMessage: String? = null,
+    val showAllQuests: Boolean = false,
+    val isLoadingAllQuests: Boolean = false,
+    val allQuests: List<Quest> = emptyList(),
+    val allQuestsError: String? = null,
 ) {
     val isLoading: Boolean
         get() = isLoadingEvents || isLoadingQuests
@@ -120,6 +126,30 @@ class ExploreViewModel @Inject constructor(
 
     fun refresh() {
         refreshTrigger.update { it + 1 }
+    }
+
+    fun toggleAllQuests() {
+        val state = _uiState.value
+        if (state.showAllQuests) {
+            _uiState.update { it.copy(showAllQuests = false) }
+            return
+        }
+        _uiState.update { it.copy(showAllQuests = true) }
+        loadAllQuests()
+    }
+
+    fun loadAllQuests() {
+        _uiState.update { it.copy(isLoadingAllQuests = true, allQuestsError = null) }
+        viewModelScope.launch {
+            val location = locationProvider.currentLocation()
+            questRepository.availableQuests(location.point)
+                .onSuccess { quests ->
+                    _uiState.update { it.copy(isLoadingAllQuests = false, allQuests = quests) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoadingAllQuests = false, allQuestsError = error.appError.message) }
+                }
+        }
     }
 
     fun onErrorShown() {

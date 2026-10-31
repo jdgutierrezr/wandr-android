@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +21,7 @@ import com.kotlin.wandr.ui.components.AuthLayout
 import com.kotlin.wandr.ui.components.LinkButton
 import com.kotlin.wandr.ui.components.PasswordTextField
 import com.kotlin.wandr.ui.components.PrimaryButton
+import com.kotlin.wandr.ui.components.WandrCard
 import com.kotlin.wandr.ui.components.WandrTextField
 import com.kotlin.wandr.ui.theme.WandrTheme
 
@@ -109,11 +112,28 @@ fun SignUpScreen(
                 isLoading = state.isLoading,
                 trailingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             )
+            if (state.emailTaken) EmailTakenCard(email = state.email, onGoToLogin = onGoToLogin)
         },
         footer = {
             LinkButton(text = "Already have an account? Log in", onClick = onGoToLogin, enabled = !state.isLoading)
         },
     )
+}
+
+@Composable
+private fun EmailTakenCard(email: String, onGoToLogin: () -> Unit) {
+    WandrCard(
+        containerColor = WandrTheme.colors.successContainer,
+        borderColor = WandrTheme.colors.successBorder,
+    ) {
+        Text("You're already a Wandr explorer!", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "${email.trim()} already has an account. Log in to pick up your quests where you left them.",
+            style = MaterialTheme.typography.bodySmall,
+            color = WandrTheme.colors.textSecondary,
+        )
+        LinkButton(text = "Log in instead", onClick = onGoToLogin)
+    }
 }
 
 @Preview(showBackground = true)

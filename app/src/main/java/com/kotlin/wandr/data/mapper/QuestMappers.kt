@@ -34,6 +34,20 @@ fun NearbyQuestDto.toEntity() = QuestEntity(
     distanceKm = distanceKm,
 )
 
+fun NearbyQuestDto.toDomain(tags: List<String>) = Quest(
+    id = id,
+    title = title,
+    description = description,
+    difficultyLevel = difficultyLevel,
+    estimatedDurationMin = estimatedDuration,
+    pointsReward = pointsReward,
+    coverImageUrl = coverImageUrl,
+    placeId = placeId,
+    placeName = placeName,
+    tags = tags.sorted(),
+    distanceKm = distanceKm,
+)
+
 fun QuestTagDto.toEntity() = QuestTagEntity(questId = questId, tagName = tags.name)
 
 fun QuestDetailDto.toEntity(distanceKm: Double?) = QuestEntity(
