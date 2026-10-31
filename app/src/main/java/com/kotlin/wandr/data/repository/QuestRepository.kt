@@ -73,6 +73,8 @@ interface QuestRepository {
 
     fun activeQuests(policy: FetchPolicy = FetchPolicy.NETWORK_FIRST): Flow<Resource<List<ActiveQuest>>>
 
+    fun completedQuestIds(): Flow<Set<String>>
+
     /** Without internet it is saved on the phone and sent later. */
     suspend fun startQuest(questId: String): Result<Unit>
 
@@ -171,6 +173,9 @@ class QuestRepositoryImpl @Inject constructor(
         refresh = ::refreshActive,
         isEmpty = { false },
     )
+
+    override fun completedQuestIds(): Flow<Set<String>> =
+        questDao.observeHistory().map { rows -> rows.map { it.questId }.toSet() }
 
     override suspend fun startQuest(questId: String): Result<Unit> = safeCall {
         if (!mustQueue()) {

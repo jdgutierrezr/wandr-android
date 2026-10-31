@@ -49,7 +49,9 @@ class QuestViewModelsTest {
 
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
-    private val questRepository = mockk<QuestRepository>()
+    private val questRepository = mockk<QuestRepository> {
+        every { completedQuestIds() } returns flowOf(emptySet())
+    }
     private val photoGallery = mockk<PhotoGallery>()
     private val telemetry = mockk<TelemetryRepository>(relaxed = true)
     private val homePreferences = mockk<HomePreferencesRepository>(relaxed = true) {
