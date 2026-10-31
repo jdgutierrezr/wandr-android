@@ -23,6 +23,7 @@ import com.kotlin.wandr.ui.feature.map.MapRoute
 import com.kotlin.wandr.ui.feature.analytics.LoadTimeRoute
 import com.kotlin.wandr.ui.feature.analytics.QuestDropoffRoute
 import com.kotlin.wandr.ui.feature.analytics.StepResponseRoute
+import com.kotlin.wandr.ui.feature.analytics.LowUseCategoriesRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestRoute
 import com.kotlin.wandr.ui.feature.quest.ActiveQuestsRoute
 import com.kotlin.wandr.ui.feature.quest.QuestDetailRoute
@@ -84,6 +85,8 @@ data object LoadTimeDestination
 @Serializable
 data object StepResponseDestination
 
+@Serializable
+data object LowUseCategoriesDestination
 
 // =============================================================
 // NAV HOST
@@ -274,6 +277,16 @@ fun WandrNavHost(
                     } else {
                         null
                     },
+                onOpenLowUseCategories =
+                    if (BuildConfig.DEBUG) {
+                        {
+                            navController.navigate(
+                                LowUseCategoriesDestination
+                            )
+                        }
+                    } else {
+                        null
+                    },
             )
         }
 
@@ -378,6 +391,14 @@ fun WandrNavHost(
                             questId
                         )
                     )
+                },
+            )
+        }
+
+        composable<LowUseCategoriesDestination> {
+            LowUseCategoriesRoute(
+                onBack = {
+                    navController.popBackStack()
                 },
             )
         }

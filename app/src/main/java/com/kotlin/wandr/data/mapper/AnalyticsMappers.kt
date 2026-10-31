@@ -8,6 +8,12 @@ import com.kotlin.wandr.domain.model.DropoffPoint
 import com.kotlin.wandr.domain.model.QuestDropoffReport
 import com.kotlin.wandr.domain.model.RecommendationLoadTime
 import com.kotlin.wandr.domain.model.StepResponseTime
+import com.kotlin.wandr.data.remote.dto.LowUseCategoryDto
+import com.kotlin.wandr.data.remote.dto.WeeklyCategoryStartsDto
+import com.kotlin.wandr.domain.model.LowUseCategory
+import com.kotlin.wandr.domain.model.WeeklyCategoryStarts
+import com.kotlin.wandr.data.local.CachedLowUseCategories
+import com.kotlin.wandr.domain.model.LowUseCategoriesReport
 
 fun QuestDropoffDto.toDomain() = DropoffPoint(
     questId = questId,
@@ -42,4 +48,23 @@ fun StepResponseTimeDto.toDomain() = StepResponseTime(
     requests = requests,
     avgMs = avgMs,
     maxMs = maxMs,
+)
+
+fun LowUseCategoryDto.toDomain() = LowUseCategory(
+    tagId = tagId,
+    tagName = tagName,
+    totalStarts = totalStarts,
+    averagePerWeek = averagePerWeek,
+    weeklyBreakdown = weeklyBreakdown.map { it.toDomain() },
+)
+
+fun WeeklyCategoryStartsDto.toDomain() = WeeklyCategoryStarts(
+    weekStart = weekStart,
+    starts = starts,
+)
+
+fun CachedLowUseCategories.toReport(isStale: Boolean) = LowUseCategoriesReport(
+    categories = rows.map { it.toDomain() },
+    updatedAtMillis = savedAtMillis,
+    isStale = isStale,
 )
