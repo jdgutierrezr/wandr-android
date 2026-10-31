@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import com.kotlin.wandr.core.network.ConnectivityObserver
 import org.junit.Rule
 import org.junit.Test
 
@@ -168,7 +169,8 @@ class QuestViewModelsTest {
     private fun tracker(): ActiveQuestViewModel {
         every { questRepository.activeQuests(any()) } returns MutableStateFlow(Resource.Success(listOf(active)))
         every { questRepository.pendingObjectiveIds() } returns flowOf(emptySet())
-        return ActiveQuestViewModel(questRepository, analyticsRepository, trackerLocation, photoGallery)
+        val connectivity = mockk<ConnectivityObserver> { every { status } returns MutableStateFlow(true) }
+        return ActiveQuestViewModel(questRepository, analyticsRepository, trackerLocation, photoGallery, connectivity)
     }
 
     @Test

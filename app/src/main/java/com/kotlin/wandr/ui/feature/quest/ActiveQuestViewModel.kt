@@ -7,6 +7,7 @@ import com.kotlin.wandr.core.error.AppError
 import com.kotlin.wandr.core.error.appError
 import com.kotlin.wandr.core.location.LocationProvider
 import com.kotlin.wandr.core.location.UserLocation
+import com.kotlin.wandr.core.network.ConnectivityObserver
 import com.kotlin.wandr.core.storage.PhotoGallery
 import com.kotlin.wandr.core.strategy.Resource
 import com.kotlin.wandr.data.repository.AnalyticsRepository
@@ -26,6 +27,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -73,6 +76,7 @@ class ActiveQuestViewModel @Inject constructor(
     private val analyticsRepository: AnalyticsRepository,
     private val locationProvider: LocationProvider,
     private val photoGallery: PhotoGallery,
+    private val connectivity: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveQuestUiState())
@@ -101,6 +105,9 @@ class ActiveQuestViewModel @Inject constructor(
         questRepository.pendingObjectiveIds()
             .onEach { ids -> _uiState.update { it.copy(pendingObjectiveIds = ids) } }
             .launchIn(viewModelScope)
+
+        // back online: reload so the offline badge goes away
+        connectivity.status.drop(1).filter { it }.onEach { refresh() }.launchIn(viewModelScope)
 
         loadDropoffHints()
     }
