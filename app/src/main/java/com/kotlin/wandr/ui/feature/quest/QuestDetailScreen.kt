@@ -115,8 +115,13 @@ internal fun QuestDetailAction(
     modifier: Modifier = Modifier,
 ) {
     PrimaryButton(
-        text = if (state.isInProgress) "Continue quest" else "Accept Quest",
+        text = when {
+            state.isInProgress -> "Continue quest"
+            state.isCompleted -> "Quest completed"
+            else -> "Accept Quest"
+        },
         onClick = if (state.isInProgress) onContinue else onAccept,
+        enabled = state.isInProgress || !state.isCompleted,
         isLoading = state.isStarting,
         trailingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
         modifier = modifier.padding(horizontal = WandrTheme.spacing.screen, vertical = WandrTheme.spacing.md),

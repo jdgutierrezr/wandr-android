@@ -24,6 +24,7 @@ data class QuestDetailUiState(
     val detail: QuestDetail? = null,
     val isShowingSavedData: Boolean = false,
     val isInProgress: Boolean = false,
+    val isCompleted: Boolean = false,
     val isStarting: Boolean = false,
     val errorMessage: String? = null,
     val startedQuestId: String? = null,
@@ -75,6 +76,10 @@ class QuestDetailViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+
+        jobs += questRepository.completedQuestIds()
+            .onEach { ids -> _uiState.update { it.copy(isCompleted = id in ids) } }
+            .launchIn(viewModelScope)
     }
 
     fun startQuest() {
@@ -84,7 +89,16 @@ class QuestDetailViewModel @Inject constructor(
         viewModelScope.launch {
             questRepository.startQuest(id)
                 .onSuccess { _uiState.update { it.copy(isStarting = false, startedQuestId = id) } }
-                .onFailure { error -> _uiState.update { it.copy(isStarting = false, errorMessage = error.appError.message) } }
+                .onFailure { error ->
+                    val message = error.appError.message
+                    _uiState.update {
+                        it.copy(
+                            isStarting = false,
+                            isCompleted = it.isCompleted || message.contains("already completed", ignoreCase = true),
+                            errorMessage = message,
+                        )
+                    }
+                }
         }
     }
 
